@@ -3,3 +3,28 @@
 /* v4: collapsible participants panel */
 .panelHead{gap:12px}.panelTitle{display:flex;align-items:center;gap:10px}.panelTitle h3{margin:0}.panelTitle span{background:#222;border-radius:20px;padding:5px 10px}.closePanel{width:36px;height:36px;border:1px solid #3b3b3b;background:#1a1a1a;color:#fff;border-radius:10px;font-size:24px;line-height:1;cursor:pointer}.closePanel:hover{background:#292929}.peopleToggle{border:1px solid #3a3a3a;background:#171717;color:#fff;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer}.peopleToggle:hover{background:#242424}.meetingBody.panelClosed{grid-template-columns:1fr}.peoplePanel.panelHidden{display:none}.connectionBadge{position:absolute;left:12px;top:12px;z-index:5;background:rgba(0,0,0,.72);border:1px solid #343434;color:#ddd;border-radius:8px;padding:5px 8px;font-size:11px}.connectionBadge.ok{color:#86e6a9;border-color:#275d39}.connectionBadge.warn{color:#ffd27a;border-color:#6b5320}.connectionBadge.bad{color:#ff9b9b;border-color:#6f2a2a}
 @media(max-width:900px){.meetingTopActions{gap:7px}.meetingTopActions .copyMain,.peopleToggle{padding:9px 11px;font-size:13px}.peoplePanel{top:86px;bottom:100px}.peoplePanel.panelHidden{display:none!important}}
+
+/* v5 — Google-Meet-like participant layout and reliable media placeholders */
+.videoGrid{display:grid!important;align-items:stretch;justify-items:stretch;grid-auto-rows:1fr;overflow:hidden}
+.videoGrid.count-1{grid-template-columns:1fr;grid-template-rows:1fr}
+.videoGrid.count-2{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+.videoGrid.count-3,.videoGrid.count-4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.videoGrid.count-many{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));grid-auto-rows:minmax(220px,1fr);overflow:auto}
+.videoTile{min-height:0;height:100%;position:relative;display:block}
+.videoTile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.avatarStage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#181818;z-index:1}
+.avatarStage.hidden{display:none!important}
+.bigAvatar{width:86px;height:86px;border-radius:50%;display:grid;place-items:center;background:#34280d;color:#e3b958;font-size:34px;font-weight:900;border:1px solid #5f4818}
+.waitingText{font-size:14px;color:#aaa}
+.videoLabel,.connectionBadge,.playAudio{z-index:4}
+.audioUnlock{position:fixed;left:50%;bottom:112px;transform:translateX(-50%);z-index:100;border:0;border-radius:999px;padding:13px 20px;background:#d4a63f;color:#070707;font-weight:900;box-shadow:0 8px 30px rgba(0,0,0,.45);cursor:pointer}
+@media(max-width:900px){
+  .meetingTop{height:auto;min-height:68px;padding:9px 12px}.meetingTitle img{width:38px;height:38px}.meetingTitle b{font-size:14px}
+  .meetingBody{padding:8px;gap:8px}.stage{border-radius:14px}.videoGrid{padding:8px;gap:8px;height:calc(100% - 112px)}
+  .videoGrid.count-2{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+  .videoGrid.count-3,.videoGrid.count-4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .controlsBar{padding:8px;gap:6px}.control{padding:9px 10px;font-size:12px}
+  .peoplePanel{right:8px;left:8px;top:76px;bottom:96px;max-height:none}
+  .bigAvatar{width:62px;height:62px;font-size:26px}
+  .waitingText{font-size:12px}
+}
