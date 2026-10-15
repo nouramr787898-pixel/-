@@ -30,14 +30,29 @@ function makeRoom(){ return crypto.randomUUID().replaceAll('-','').slice(0,10); 
 function meetingUrl(id,host=false){ const u=new URL(location.origin+location.pathname); u.searchParams.set('room',id); if(host)u.searchParams.set('host','1'); return u.toString(); }
 function shareUrl(){ return meetingUrl(roomId,false); }
 
+function setPeoplePanel(open){
+  const panel=$('#peoplePanel');
+  const body=document.querySelector('.meetingBody');
+  if(!panel||!body)return;
+  panel.classList.toggle('panelHidden',!open);
+  body.classList.toggle('panelClosed',!open);
+  $('#peopleToggleBtn')?.setAttribute('aria-expanded',open?'true':'false');
+}
+document.addEventListener('click',e=>{
+  // A user gesture helps browsers allow remote audio playback.
+  if(audioCtx?.state==='suspended') audioCtx.resume().catch(()=>{});
+});
+
 function createMeeting(){ roomId=makeRoom(); isHost=true; history.replaceState({},'',meetingUrl(roomId,true)); openPrejoin(); }
 $('#createMeeting').onclick=createMeeting; $('#headerCreate').onclick=createMeeting;
+$('#closePeopleBtn').onclick=()=>setPeoplePanel(false);
+$('#peopleToggleBtn').onclick=()=>setPeoplePanel($('#peoplePanel').classList.contains('panelHidden'));
 $('#joinByCode').onclick=()=>{ const link=prompt('الصق رابط الاجتماع هنا'); if(!link)return; try{ location.href=new URL(link).href; }catch{ toast('الرابط غير صحيح'); } };
 
 async function openPrejoin(){ show('prejoin'); $('#roomCodeText').textContent='رمز الاجتماع: '+roomId; $('#enterRoom').textContent=isHost?'بدء الاجتماع':'طلب الانضمام'; await getMedia(); }
 async function getMedia(){
-  try{ localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true}); $('#previewVideo').srcObject=localStream; $('#previewPlaceholder').style.display='none'; }
-  catch{ try{ localStream=await navigator.mediaDevices.getUserMedia({video:false,audio:true}); }catch{} $('#previewPlaceholder').style.display='grid'; toast('يمكنك الدخول بدون كاميرا'); }
+  try{ localStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); $('#previewVideo').srcObject=localStream; $('#previewPlaceholder').style.display='none'; }
+  catch{ try{ localStream=await navigator.mediaDevices.getUserMedia({video:false,audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}); }catch{} $('#previewPlaceholder').style.display='grid'; toast('يمكنك الدخول بدون كاميرا'); }
 }
 function setTrack(kind,on){ localStream?.getTracks().filter(t=>t.kind===kind).forEach(t=>t.enabled=on); }
 $('#preMic').onclick=()=>{ const b=$('#preMic'); b.classList.toggle('active'); const on=b.classList.contains('active'); b.textContent='الميكروفون: '+(on?'يعمل':'مغلق'); setTrack('audio',on); };
@@ -60,6 +75,7 @@ socket.on('room-unavailable',()=>{ alert('هذا الاجتماع غير متا�
 
 function enterMeeting(){
   show('meeting');
+  setPeoplePanel(true);
   $('#meetingRoomId').textContent='رمز: '+roomId;
   if(isHost) $('#endBtn').classList.remove('hidden');
   addVideo('local',localStream,displayName,true);
@@ -95,26 +111,61 @@ function removeVideo(id){ document.getElementById('v-'+id)?.remove(); participan
 async function createPeer(id,initiator=false){
   if(peers.has(id)) return peers.get(id);
   const pc=new RTCPeerConnection(rtcConfig); peers.set(id,pc);
+  pc._makingOffer=false;
   localStream?.getTracks().forEach(t=>pc.addTrack(t,localStream));
+
   pc.onicecandidate=e=>{ if(e.candidate) socket.emit('signal',{target:id,data:{candidate:e.candidate}}); };
-  pc.ontrack=e=>{ let s=remoteStreams.get(id); if(!s){ s=new MediaStream(); remoteStreams.set(id,s); } s.addTrack(e.track); addVideo(id,s,participantNames.get(id)||'مشارك'); connectRemoteToRecorder(s,id); };
-  pc.onconnectionstatechange=()=>{ if(['failed','closed','disconnected'].includes(pc.connectionState)){ pc.close(); peers.delete(id); removeVideo(id); } };
-  if(initiator){ const offer=await pc.createOffer(); await pc.setLocalDescription(offer); socket.emit('signal',{target:id,data:{sdp:pc.localDescription}}); }
+  pc.onicecandidateerror=e=>console.warn('ICE candidate error',e);
+  pc.ontrack=e=>{
+    let stream=e.streams?.[0] || remoteStreams.get(id);
+    if(!stream){ stream=new MediaStream(); }
+    if(!e.streams?.[0] && !stream.getTracks().some(t=>t.id===e.track.id)) stream.addTrack(e.track);
+    remoteStreams.set(id,stream);
+    addVideo(id,stream,participantNames.get(id)||'مشارك');
+    connectRemoteToRecorder(stream,id);
+  };
+  pc.onconnectionstatechange=()=>{
+    const tile=document.getElementById('v-'+id);
+    if(tile){
+      let badge=tile.querySelector('.connectionBadge');
+      if(!badge){ badge=document.createElement('div'); badge.className='connectionBadge'; tile.appendChild(badge); }
+      const st=pc.connectionState;
+      badge.textContent=st==='connected'?'متصل':st==='connecting'?'جاري الاتصال…':st==='failed'?'إعادة الاتصال…':st==='disconnected'?'انقطع الاتصال…':'';
+      badge.className='connectionBadge '+(st==='connected'?'ok':st==='failed'||st==='disconnected'?'bad':'warn');
+      if(!badge.textContent) badge.classList.add('hidden'); else badge.classList.remove('hidden');
+    }
+    if(pc.connectionState==='failed'){
+      try{ pc.restartIce(); }catch{}
+      if(isHost || socket.id < id) renegotiatePeer(id).catch(()=>{});
+    }
+    if(pc.connectionState==='closed'){ peers.delete(id); removeVideo(id); }
+  };
+  if(initiator) await renegotiatePeer(id);
   return pc;
 }
+async function renegotiatePeer(id){
+  const pc=peers.get(id); if(!pc || pc.signalingState==='closed' || pc._makingOffer)return;
+  try{
+    pc._makingOffer=true;
+    const offer=await pc.createOffer({iceRestart:pc.connectionState==='failed'});
+    await pc.setLocalDescription(offer);
+    socket.emit('signal',{target:id,data:{sdp:pc.localDescription}});
+  }finally{ pc._makingOffer=false; }
+}
 
-socket.on('existing-users',async users=>{ for(const u of users){ participantNames.set(u.id,u.name||'مشارك'); await createPeer(u.id,true); } });
+socket.on('existing-users',async users=>{
+  // Existing participants will initiate toward the newcomer. The newcomer waits for their offers.
+  // This avoids both sides creating offers simultaneously (WebRTC glare), which can break audio/video.
+  for(const u of users){ participantNames.set(u.id,u.name||'مشارك'); await createPeer(u.id,false); }
+});
 socket.on('user-joined',async({id,name})=>{ participantNames.set(id,name||'مشارك'); if(!peers.has(id)) await createPeer(id,true); });
 socket.on('signal',async({from,data,name})=>{
   participantNames.set(from,name||participantNames.get(from)||'مشارك');
   const pc=await createPeer(from,false);
   if(data.sdp){
     try{
-      // If both sides created offers at nearly the same time, the participant with the
-      // lexicographically smaller socket id keeps its offer; the other side rolls back.
       if(data.sdp.type==='offer' && pc.signalingState==='have-local-offer'){
-        const polite=socket.id>from;
-        if(!polite) return;
+        // Defensive fallback for a rare renegotiation collision.
         await pc.setLocalDescription({type:'rollback'});
       }
       await pc.setRemoteDescription(data.sdp);
@@ -174,6 +225,10 @@ async function copyLink(){ try{ await navigator.clipboard.writeText(shareUrl());
 $('#copyBtn').onclick=copyLink; $('#copySide').onclick=copyLink; $('#topCopyBtn').onclick=copyLink;
 $('#leaveBtn').onclick=()=>leaveMeeting();
 function leaveMeeting(){ socket.emit('leave-room',{roomId}); peers.forEach(p=>p.close()); localStream?.getTracks().forEach(t=>t.stop()); screenStream?.getTracks().forEach(t=>t.stop()); location.href=location.pathname; }
+
+socket.on('connect',()=>{
+  // Socket.IO can reconnect after a brief network drop. Existing WebRTC peers stay intact.
+});
 
 socket.on('room-ended',()=>{ if(isHost)return; peers.forEach(p=>p.close()); localStream?.getTracks().forEach(t=>t.stop()); show('ended'); });
 

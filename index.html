@@ -59,7 +59,7 @@
   <section id="meeting" class="meeting hidden">
     <div class="meetingTop">
       <div class="meetingTitle"><img src="logo.png" alt="logo"><div><b id="meetingName">الاجتماع</b><span id="meetingRoomId"></span></div></div>
-      <div class="meetingTopActions"><span id="participantCount">1 مشارك</span><button id="topCopyBtn" class="copyMain">نسخ رابط الاجتماع</button></div>
+      <div class="meetingTopActions"><span id="participantCount">1 مشارك</span><button id="peopleToggleBtn" class="peopleToggle">المشاركون</button><button id="topCopyBtn" class="copyMain">نسخ رابط الاجتماع</button></div>
     </div>
 
     <div class="meetingBody">
@@ -75,8 +75,8 @@
         </div>
       </div>
 
-      <aside class="peoplePanel">
-        <div class="panelHead"><h3>المشاركون</h3><span id="peopleCount">1</span></div>
+      <aside id="peoplePanel" class="peoplePanel">
+        <div class="panelHead"><div class="panelTitle"><h3>المشاركون</h3><span id="peopleCount">1</span></div><button id="closePeopleBtn" class="closePanel" aria-label="إغلاق قائمة المشاركين">×</button></div>
         <div id="pendingSection" class="pendingSection hidden">
           <h4>طلبات الانضمام</h4>
           <div id="joinRequests"></div>
