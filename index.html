@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b0b0c" />
+  <title>تسجيل الاجتماعات AI</title>
+  <link rel="icon" href="logo.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="ambient ambient-1"></div><div class="ambient ambient-2"></div>
+  <header class="topbar">
+    <a class="brand" href="/"><img src="logo.png" alt="تسجيل الاجتماعات AI" /></a>
+    <nav><button class="navlink" data-scroll="features">المميزات</button><button class="navlink" data-scroll="how">كيف يعمل؟</button></nav>
+    <button id="headerCreate" class="btn btn-gold">ابدأ اجتماعًا</button>
+  </header>
+
+  <main id="landing">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">اجتماعات أذكى • ملخص تلقائي بعد النهاية</span>
+        <h1>اجتمع بالصوت والصورة<br><span>والـAI يلخص كل شيء.</span></h1>
+        <p>أنشئ رابطًا، شاركه مع فريقك، وابدأ الاجتماع. عند النهاية يحوّل الذكاء الاصطناعي التسجيل إلى نص ثم يستخرج الملخص، أهم النقاط، القرارات والمهام.</p>
+        <div class="hero-actions"><button id="createMeeting" class="btn btn-gold btn-lg">إنشاء اجتماع جديد</button><button id="joinByCode" class="btn btn-dark btn-lg">الانضمام برابط</button></div>
+        <div class="trust"><span>◉ صوت وصورة</span><span>◉ مشاركة شاشة</span><span>◉ تلخيص AI</span></div>
+      </div>
+      <div class="demo-card">
+        <div class="demo-top"><span class="live-dot"></span><span>اجتماع فريق المشروع</span><span class="timer">24:17</span></div>
+        <div class="demo-grid"><div class="person p1">أحمد</div><div class="person p2">سارة</div><div class="person p3">خالد</div><div class="person p4">محمود</div></div>
+        <div class="demo-summary"><strong>✦ ملخص AI</strong><p>تم الاتفاق على النسخة الجديدة، تحديد مهام الفريق وموعد المتابعة.</p><div class="chips"><span>3 قرارات</span><span>4 مهام</span><span>5 نقاط مهمة</span></div></div>
+      </div>
+    </section>
+
+    <section id="features" class="section"><div class="section-head"><span>المميزات</span><h2>من الاجتماع إلى نتيجة واضحة</h2></div><div class="feature-grid">
+      <article><b>🔗</b><h3>رابط اجتماع فوري</h3><p>أنشئ غرفة وشارك الرابط مباشرة مع أي شخص.</p></article>
+      <article><b>🎥</b><h3>صوت وصورة</h3><p>تشغيل أو إيقاف الكاميرا والميكروفون وقتما تريد.</p></article>
+      <article><b>🖥️</b><h3>مشاركة الشاشة</h3><p>اعرض شاشتك للمشاركين أثناء المكالمة.</p></article>
+      <article><b>✨</b><h3>تلخيص بالذكاء الاصطناعي</h3><p>تفريغ التسجيل ثم استخراج الملخص تلقائيًا بعد النهاية.</p></article>
+      <article><b>✅</b><h3>القرارات والمهام</h3><p>استخراج القرارات، المسؤوليات والمواعيد التي ذُكرت.</p></article>
+      <article><b>💬</b><h3>دردشة داخل الاجتماع</h3><p>رسائل سريعة لكل المشاركين داخل نفس الغرفة.</p></article>
+    </div></section>
+
+    <section id="how" class="section how"><div class="section-head"><span>كيف يعمل؟</span><h2>ثلاث خطوات فقط</h2></div><div class="steps"><div><i>1</i><h3>أنشئ الرابط</h3><p>اضغط إنشاء اجتماع وانسخ الرابط.</p></div><div><i>2</i><h3>ابدأ الاجتماع</h3><p>شارك الرابط واجتمع بالصوت أو الفيديو.</p></div><div><i>3</i><h3>احصل على الملخص</h3><p>عند الإنهاء، يُجهّز الـAI نتيجة الاجتماع.</p></div></div></section>
+  </main>
+
+  <section id="prejoin" class="screen hidden"><div class="prejoin-card"><img src="logo.png" class="prejoin-logo" alt="logo"><h2>جاهز للانضمام؟</h2><p id="roomCodeText"></p><div class="preview-wrap"><video id="previewVideo" autoplay muted playsinline></video><div id="previewPlaceholder">الكاميرا مغلقة</div></div><input id="displayName" placeholder="اكتب اسمك" maxlength="40" /><div class="pre-controls"><button id="preMic" class="circle active">🎙️</button><button id="preCam" class="circle active">📹</button></div><button id="enterRoom" class="btn btn-gold btn-lg full">دخول الاجتماع</button><p class="notice">بدخولك أنت توافق على ظهور إشعار التسجيل/التفريغ للمشاركين عند استخدام التلخيص.</p></div></section>
+
+  <section id="meeting" class="meeting hidden">
+    <div class="meeting-head"><div><img src="logo.png" alt="logo"><span id="meetingRoomId"></span></div><div class="meeting-badges"><span id="participantCount">1 مشارك</span><span id="recordBadge" class="record-badge hidden">● جارٍ تجهيز تسجيل الملخص</span></div></div>
+    <div class="meeting-layout">
+      <div class="stage"><div id="videoGrid" class="video-grid"></div><div class="controls"><button id="micBtn" title="الميكروفون">🎙️</button><button id="camBtn" title="الكاميرا">📹</button><button id="screenBtn" title="مشاركة الشاشة">🖥️</button><button id="copyBtn" title="نسخ الرابط">🔗</button><button id="leaveBtn" class="danger" title="مغادرة">📞</button><button id="endBtn" class="gold-control hidden" title="إنهاء وتلخيص">✨ إنهاء وتلخيص</button></div></div>
+      <aside class="sidepanel"><div class="tabs"><button class="tab active" data-tab="chat">الدردشة</button><button class="tab" data-tab="info">المعلومات</button></div><div id="chatTab" class="tabbody"><div id="messages" class="messages"></div><form id="chatForm"><input id="chatInput" placeholder="اكتب رسالة..." autocomplete="off"><button>إرسال</button></form></div><div id="infoTab" class="tabbody hidden"><h3>رابط الاجتماع</h3><p id="shareUrl" class="share-url"></p><button id="copySide" class="btn btn-dark full">نسخ الرابط</button><p class="notice">عند استخدام التلخيص، يجب إعلام المشاركين أن الصوت سيُعالج لإنشاء النص والملخص.</p></div></aside>
+    </div>
+  </section>
+
+  <section id="processing" class="screen hidden"><div class="processing-card"><div class="spinner"></div><h2>الذكاء الاصطناعي يجهز ملخص الاجتماع</h2><p>جارٍ تحويل التسجيل إلى نص واستخراج القرارات والمهام...</p></div></section>
+
+  <section id="summary" class="summary-screen hidden"><div class="summary-shell"><div class="summary-header"><img src="logo.png" alt="logo"><div><span>نتيجة الاجتماع</span><h1 id="summaryTitle">ملخص الاجتماع</h1></div><button id="newMeeting" class="btn btn-gold">اجتماع جديد</button></div><div class="summary-grid"><article class="summary-main"><h2>الملخص</h2><p id="summaryText"></p><h3>أهم النقاط</h3><ul id="keyPoints"></ul><h3>القرارات</h3><ul id="decisions"></ul></article><article><h2>المهام</h2><div id="actions"></div><h2 class="mt">متابعات</h2><ul id="followUps"></ul></article></div><details><summary>عرض النص الكامل للاجتماع</summary><pre id="transcript"></pre></details></div></section>
+
+  <div id="toast" class="toast"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

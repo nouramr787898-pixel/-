@@ -1,11 +1,19 @@
 {
-  "name": "ai-meet-mvp",
+  "name": "ai-meeting-platform",
+  "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "install:all": "npm --prefix client install && npm --prefix server install",
-    "dev": "npx concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\""
+    "start": "node server.js"
   },
-  "devDependencies": {
-    "concurrently": "latest"
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "openai": "^6.3.0",
+    "socket.io": "^4.8.1"
   }
 }
