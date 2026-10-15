@@ -3,60 +3,109 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#0b0b0c" />
+  <meta name="theme-color" content="#ffffff" />
   <title>تسجيل الاجتماعات AI</title>
   <link rel="icon" href="logo.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="ambient ambient-1"></div><div class="ambient ambient-2"></div>
   <header class="topbar">
-    <a class="brand" href="/"><img src="logo.png" alt="تسجيل الاجتماعات AI" /></a>
-    <nav><button class="navlink" data-scroll="features">المميزات</button><button class="navlink" data-scroll="how">كيف يعمل؟</button></nav>
-    <button id="headerCreate" class="btn btn-gold">ابدأ اجتماعًا</button>
+    <a class="brand" href="/"><img src="logo.png" alt="الشعار"><span>اجتماعات AI</span></a>
+    <button id="headerCreate" class="primary small">اجتماع جديد</button>
   </header>
 
-  <main id="landing">
-    <section class="hero">
-      <div class="hero-copy">
-        <span class="eyebrow">اجتماعات أذكى • ملخص تلقائي بعد النهاية</span>
-        <h1>اجتمع بالصوت والصورة<br><span>والـAI يلخص كل شيء.</span></h1>
-        <p>أنشئ رابطًا، شاركه مع فريقك، وابدأ الاجتماع. عند النهاية يحوّل الذكاء الاصطناعي التسجيل إلى نص ثم يستخرج الملخص، أهم النقاط، القرارات والمهام.</p>
-        <div class="hero-actions"><button id="createMeeting" class="btn btn-gold btn-lg">إنشاء اجتماع جديد</button><button id="joinByCode" class="btn btn-dark btn-lg">الانضمام برابط</button></div>
-        <div class="trust"><span>◉ صوت وصورة</span><span>◉ مشاركة شاشة</span><span>◉ تلخيص AI</span></div>
+  <main id="landing" class="landing page">
+    <section class="hero card">
+      <div class="heroText">
+        <span class="badge">اجتماعات بسيطة • تلخيص تلقائي بالذكاء الاصطناعي</span>
+        <h1>اجتماعك في رابط واحد.<br><span>والـAI يلخصه بعد النهاية.</span></h1>
+        <p>أنشئ اجتماعًا، انسخ الرابط وأرسله لأي شخص. أنت تقبل أو ترفض طلب الدخول، وبعد انتهاء الاجتماع تحصل على ملخص وقرارات ومهام.</p>
+        <div class="heroActions">
+          <button id="createMeeting" class="primary">إنشاء اجتماع</button>
+          <button id="joinByCode" class="secondary">لدي رابط اجتماع</button>
+        </div>
       </div>
-      <div class="demo-card">
-        <div class="demo-top"><span class="live-dot"></span><span>اجتماع فريق المشروع</span><span class="timer">24:17</span></div>
-        <div class="demo-grid"><div class="person p1">أحمد</div><div class="person p2">سارة</div><div class="person p3">خالد</div><div class="person p4">محمود</div></div>
-        <div class="demo-summary"><strong>✦ ملخص AI</strong><p>تم الاتفاق على النسخة الجديدة، تحديد مهام الفريق وموعد المتابعة.</p><div class="chips"><span>3 قرارات</span><span>4 مهام</span><span>5 نقاط مهمة</span></div></div>
+      <div class="heroPreview">
+        <div class="previewTop"><b>اجتماع فريق المشروع</b><span>3 مشاركين</span></div>
+        <div class="previewGrid"><div>أحمد</div><div>سارة</div><div>محمد</div></div>
+        <div class="previewBottom">ملخص AI جاهز بعد إنهاء الاجتماع</div>
       </div>
     </section>
-
-    <section id="features" class="section"><div class="section-head"><span>المميزات</span><h2>من الاجتماع إلى نتيجة واضحة</h2></div><div class="feature-grid">
-      <article><b>🔗</b><h3>رابط اجتماع فوري</h3><p>أنشئ غرفة وشارك الرابط مباشرة مع أي شخص.</p></article>
-      <article><b>🎥</b><h3>صوت وصورة</h3><p>تشغيل أو إيقاف الكاميرا والميكروفون وقتما تريد.</p></article>
-      <article><b>🖥️</b><h3>مشاركة الشاشة</h3><p>اعرض شاشتك للمشاركين أثناء المكالمة.</p></article>
-      <article><b>✨</b><h3>تلخيص بالذكاء الاصطناعي</h3><p>تفريغ التسجيل ثم استخراج الملخص تلقائيًا بعد النهاية.</p></article>
-      <article><b>✅</b><h3>القرارات والمهام</h3><p>استخراج القرارات، المسؤوليات والمواعيد التي ذُكرت.</p></article>
-      <article><b>💬</b><h3>دردشة داخل الاجتماع</h3><p>رسائل سريعة لكل المشاركين داخل نفس الغرفة.</p></article>
-    </div></section>
-
-    <section id="how" class="section how"><div class="section-head"><span>كيف يعمل؟</span><h2>ثلاث خطوات فقط</h2></div><div class="steps"><div><i>1</i><h3>أنشئ الرابط</h3><p>اضغط إنشاء اجتماع وانسخ الرابط.</p></div><div><i>2</i><h3>ابدأ الاجتماع</h3><p>شارك الرابط واجتمع بالصوت أو الفيديو.</p></div><div><i>3</i><h3>احصل على الملخص</h3><p>عند الإنهاء، يُجهّز الـAI نتيجة الاجتماع.</p></div></div></section>
+    <section class="threeCards">
+      <article class="card"><b>1</b><h3>أنشئ الرابط</h3><p>زر واحد فقط لإنشاء اجتماع جديد.</p></article>
+      <article class="card"><b>2</b><h3>اقبل المشاركين</h3><p>لن يدخل أي شخص قبل موافقتك.</p></article>
+      <article class="card"><b>3</b><h3>احصل على الملخص</h3><p>بعد الإنهاء، يحلل الـAI الاجتماع تلقائيًا.</p></article>
+    </section>
   </main>
 
-  <section id="prejoin" class="screen hidden"><div class="prejoin-card"><img src="logo.png" class="prejoin-logo" alt="logo"><h2>جاهز للانضمام؟</h2><p id="roomCodeText"></p><div class="preview-wrap"><video id="previewVideo" autoplay muted playsinline></video><div id="previewPlaceholder">الكاميرا مغلقة</div></div><input id="displayName" placeholder="اكتب اسمك" maxlength="40" /><div class="pre-controls"><button id="preMic" class="circle active">🎙️</button><button id="preCam" class="circle active">📹</button></div><button id="enterRoom" class="btn btn-gold btn-lg full">دخول الاجتماع</button><p class="notice">بدخولك أنت توافق على ظهور إشعار التسجيل/التفريغ للمشاركين عند استخدام التلخيص.</p></div></section>
-
-  <section id="meeting" class="meeting hidden">
-    <div class="meeting-head"><div><img src="logo.png" alt="logo"><span id="meetingRoomId"></span></div><div class="meeting-badges"><span id="participantCount">1 مشارك</span><span id="recordBadge" class="record-badge hidden">● جارٍ تجهيز تسجيل الملخص</span></div></div>
-    <div class="meeting-layout">
-      <div class="stage"><div id="videoGrid" class="video-grid"></div><div class="controls"><button id="micBtn" title="الميكروفون">🎙️</button><button id="camBtn" title="الكاميرا">📹</button><button id="screenBtn" title="مشاركة الشاشة">🖥️</button><button id="copyBtn" title="نسخ الرابط">🔗</button><button id="leaveBtn" class="danger" title="مغادرة">📞</button><button id="endBtn" class="gold-control hidden" title="إنهاء وتلخيص">✨ إنهاء وتلخيص</button></div></div>
-      <aside class="sidepanel"><div class="tabs"><button class="tab active" data-tab="chat">الدردشة</button><button class="tab" data-tab="info">المعلومات</button></div><div id="chatTab" class="tabbody"><div id="messages" class="messages"></div><form id="chatForm"><input id="chatInput" placeholder="اكتب رسالة..." autocomplete="off"><button>إرسال</button></form></div><div id="infoTab" class="tabbody hidden"><h3>رابط الاجتماع</h3><p id="shareUrl" class="share-url"></p><button id="copySide" class="btn btn-dark full">نسخ الرابط</button><p class="notice">عند استخدام التلخيص، يجب إعلام المشاركين أن الصوت سيُعالج لإنشاء النص والملخص.</p></div></aside>
+  <section id="prejoin" class="page hidden">
+    <div class="joinCard card">
+      <img src="logo.png" class="joinLogo" alt="logo">
+      <h2 id="prejoinTitle">الانضمام للاجتماع</h2>
+      <p id="roomCodeText" class="muted"></p>
+      <div class="previewWrap"><video id="previewVideo" autoplay muted playsinline></video><div id="previewPlaceholder">الكاميرا مغلقة</div></div>
+      <label>اسمك</label>
+      <input id="displayName" class="textInput" placeholder="اكتب اسمك" maxlength="40" />
+      <div class="preControls">
+        <button id="preMic" class="toggle active">الميكروفون: يعمل</button>
+        <button id="preCam" class="toggle active">الكاميرا: تعمل</button>
+      </div>
+      <button id="enterRoom" class="primary full">طلب الانضمام</button>
+      <div id="waitingBox" class="waiting hidden"><div class="spinner"></div><b>في انتظار موافقة صاحب الاجتماع...</b><button id="cancelRequest" class="linkButton">إلغاء</button></div>
+      <p class="note">عند استخدام ميزة التلخيص، قد تتم معالجة صوت الاجتماع لإنشاء النص والملخص.</p>
     </div>
   </section>
 
-  <section id="processing" class="screen hidden"><div class="processing-card"><div class="spinner"></div><h2>الذكاء الاصطناعي يجهز ملخص الاجتماع</h2><p>جارٍ تحويل التسجيل إلى نص واستخراج القرارات والمهام...</p></div></section>
+  <section id="meeting" class="meeting hidden">
+    <div class="meetingTop">
+      <div class="meetingTitle"><img src="logo.png" alt="logo"><div><b id="meetingName">الاجتماع</b><span id="meetingRoomId"></span></div></div>
+      <div class="meetingTopActions"><span id="participantCount">1 مشارك</span><button id="topCopyBtn" class="copyMain">نسخ رابط الاجتماع</button></div>
+    </div>
 
-  <section id="summary" class="summary-screen hidden"><div class="summary-shell"><div class="summary-header"><img src="logo.png" alt="logo"><div><span>نتيجة الاجتماع</span><h1 id="summaryTitle">ملخص الاجتماع</h1></div><button id="newMeeting" class="btn btn-gold">اجتماع جديد</button></div><div class="summary-grid"><article class="summary-main"><h2>الملخص</h2><p id="summaryText"></p><h3>أهم النقاط</h3><ul id="keyPoints"></ul><h3>القرارات</h3><ul id="decisions"></ul></article><article><h2>المهام</h2><div id="actions"></div><h2 class="mt">متابعات</h2><ul id="followUps"></ul></article></div><details><summary>عرض النص الكامل للاجتماع</summary><pre id="transcript"></pre></details></div></section>
+    <div class="meetingBody">
+      <div class="stage">
+        <div id="videoGrid" class="videoGrid"></div>
+        <div class="controlsBar">
+          <button id="micBtn" class="control">إيقاف الميكروفون</button>
+          <button id="camBtn" class="control">إيقاف الكاميرا</button>
+          <button id="screenBtn" class="control">مشاركة الشاشة</button>
+          <button id="copyBtn" class="control strong">نسخ الرابط</button>
+          <button id="leaveBtn" class="control danger">مغادرة</button>
+          <button id="endBtn" class="control end hidden">إنهاء وتلخيص</button>
+        </div>
+      </div>
+
+      <aside class="peoplePanel">
+        <div class="panelHead"><h3>المشاركون</h3><span id="peopleCount">1</span></div>
+        <div id="pendingSection" class="pendingSection hidden">
+          <h4>طلبات الانضمام</h4>
+          <div id="joinRequests"></div>
+        </div>
+        <div id="participantsList" class="participantsList"></div>
+        <div class="shareBox">
+          <b>دعوة أشخاص</b>
+          <p>انسخ الرابط وأرسله لمن تريد.</p>
+          <button id="copySide" class="primary full">نسخ رابط الاجتماع</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="rejected" class="page hidden"><div class="statusCard card"><h2>لم تتم الموافقة على الانضمام</h2><p>يمكنك الرجوع وطلب الانضمام مرة أخرى.</p><button class="primary" onclick="location.reload()">العودة</button></div></section>
+  <section id="ended" class="page hidden"><div class="statusCard card"><h2>انتهى الاجتماع</h2><p>أنهى صاحب الاجتماع هذه الجلسة.</p><button class="primary" onclick="location.href=location.pathname">الرئيسية</button></div></section>
+
+  <section id="processing" class="page hidden"><div class="statusCard card"><div class="spinner"></div><h2>جاري إعداد ملخص الاجتماع</h2><p>يتم تحويل الصوت إلى نص ثم استخراج أهم النقاط والقرارات والمهام.</p></div></section>
+
+  <section id="summary" class="page hidden">
+    <div class="summaryShell">
+      <div class="summaryHead"><div><span>نتيجة الاجتماع</span><h1 id="summaryTitle">ملخص الاجتماع</h1></div><button id="newMeeting" class="primary">اجتماع جديد</button></div>
+      <div class="summaryGrid">
+        <article class="card"><h2>الملخص</h2><p id="summaryText"></p><h3>أهم النقاط</h3><ul id="keyPoints"></ul><h3>القرارات</h3><ul id="decisions"></ul></article>
+        <article class="card"><h2>المهام</h2><div id="actions"></div><h3>المتابعات</h3><ul id="followUps"></ul></article>
+      </div>
+      <details class="card"><summary>عرض النص الكامل للاجتماع</summary><pre id="transcript"></pre></details>
+    </div>
+  </section>
 
   <div id="toast" class="toast"></div>
   <script src="/socket.io/socket.io.js"></script>

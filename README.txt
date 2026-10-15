@@ -1,15 +1,20 @@
-AI Meeting Platform - GitHub ready flat project
+AI Meeting Platform - Simple White Version
 
-All project files are intentionally in the repository root (no source folders).
+All files are intentionally in one folder/root for easy GitHub upload.
 
-IMPORTANT:
-GitHub stores the code, but GitHub Pages cannot run the Node.js server required for WebRTC signaling and AI summarization.
-To run the full site, connect this GitHub repository to a Node.js hosting service (for example Render) and use:
-Build command: npm install
-Start command: npm start
-Environment variable: OPENAI_API_KEY=your key
-Optional: SUMMARY_MODEL=gpt-6-luna
+Replace the old repository files with these files.
+Required Railway variable:
+OPENAI_API_KEY = your OpenAI API key
 
-The host creates a meeting link. Participants join with camera/mic. The host browser records the mixed meeting audio for the summary flow. When the host clicks End & Summarize, the recording is uploaded to the server, transcribed, and summarized.
+Start command:
+npm start
 
-Production note: This MVP uses peer-to-peer WebRTC mesh with public STUN. For large or highly reliable meetings, add a TURN server or migrate media to an SFU.
+Main features:
+- Simple white interface
+- Create and copy a meeting link
+- Host approval/rejection before participant entry
+- Visible participant list and host badge
+- Camera, microphone, screen sharing
+- End meeting + AI transcript and summary
+
+Note: Browser-to-browser WebRTC works best for small meetings. Production-scale meetings should use an SFU/TURN service.
