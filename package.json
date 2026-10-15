@@ -1,0 +1,11 @@
+{
+  "name": "ai-meet-mvp",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix client install && npm --prefix server install",
+    "dev": "npx concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "latest"
+  }
+}
