@@ -1,20 +1,21 @@
-AI Meeting Platform - Simple White Version
+AI Meeting - Dark Simple v3
+===========================
+Files are intentionally flat (no folders).
 
-All files are intentionally in one folder/root for easy GitHub upload.
+Changes in v3:
+- Simple black interface with clear white text.
+- Clear Copy Meeting Link button.
+- Host approval/rejection before a guest enters.
+- Participant list with mic/camera state.
+- Improved WebRTC negotiation and ICE candidate handling.
+- STUN + demo TURN fallback to improve audio/video connectivity across different networks.
+- If the browser blocks remote audio autoplay, a clear "تشغيل الصوت" button appears on the participant tile.
+- AI transcription and summary after host ends the meeting.
 
-Replace the old repository files with these files.
-Required Railway variable:
-OPENAI_API_KEY = your OpenAI API key
+Deploy:
+1) Upload all files to the root of your GitHub repository.
+2) Railway auto-deploys after the commit.
+3) Keep OPENAI_API_KEY in Railway Variables, never in GitHub.
 
-Start command:
-npm start
-
-Main features:
-- Simple white interface
-- Create and copy a meeting link
-- Host approval/rejection before participant entry
-- Visible participant list and host badge
-- Camera, microphone, screen sharing
-- End meeting + AI transcript and summary
-
-Note: Browser-to-browser WebRTC works best for small meetings. Production-scale meetings should use an SFU/TURN service.
+Production note:
+The included TURN fallback is intended for MVP/testing. For a production service, use your own managed TURN/SFU (for example LiveKit Cloud) for reliability and scale.

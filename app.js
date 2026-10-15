@@ -11,7 +11,18 @@ const peers = new Map();
 const remoteStreams = new Map();
 const participantNames = new Map();
 const connectedSources = new Set();
-const rtcConfig = { iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}] };
+const pendingCandidates = new Map();
+const rtcConfig = {
+  iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:openrelay.metered.ca:80'},
+    {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+    {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+    {urls:'turns:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'}
+  ],
+  iceCandidatePoolSize:10
+};
 
 function show(id){ ['landing','prejoin','meeting','processing','summary','rejected','ended'].forEach(x=>$('#'+x)?.classList.add('hidden')); $('#'+id)?.classList.remove('hidden'); }
 function toast(t){ const e=$('#toast'); e.textContent=t; e.classList.add('show'); setTimeout(()=>e.classList.remove('show'),2200); }
@@ -61,10 +72,19 @@ function addVideo(id,stream,name,local=false){
   let tile=$('#v-'+CSS.escape(id));
   if(!tile){
     tile=document.createElement('div'); tile.id='v-'+id; tile.className='videoTile'+(local?' local':'');
-    tile.innerHTML='<video autoplay playsinline '+(local?'muted':'')+'></video><div class="videoOff hidden">الكاميرا مغلقة</div><div class="videoLabel"></div>';
+    tile.innerHTML='<video autoplay playsinline '+(local?'muted':'')+'></video><div class="videoOff hidden">الكاميرا مغلقة</div><button class="playAudio hidden">تشغيل الصوت</button><div class="videoLabel"></div>';
     $('#videoGrid').appendChild(tile);
   }
-  tile.querySelector('video').srcObject=stream;
+  const video=tile.querySelector('video');
+  video.srcObject=stream;
+  if(!local){
+    video.muted=false; video.volume=1;
+    const playBtn=tile.querySelector('.playAudio');
+    const tryPlay=()=>video.play().then(()=>playBtn.classList.add('hidden')).catch(()=>playBtn.classList.remove('hidden'));
+    playBtn.onclick=()=>tryPlay();
+    video.onloadedmetadata=()=>tryPlay();
+    tryPlay();
+  }
   tile.querySelector('.videoLabel').textContent=name+(local?' (أنت)':'');
   participantNames.set(id,name);
   updateVideoOff(id,stream);
@@ -84,12 +104,32 @@ async function createPeer(id,initiator=false){
 }
 
 socket.on('existing-users',async users=>{ for(const u of users){ participantNames.set(u.id,u.name||'مشارك'); await createPeer(u.id,true); } });
-socket.on('user-joined',({id,name})=>{ participantNames.set(id,name||'مشارك'); });
+socket.on('user-joined',async({id,name})=>{ participantNames.set(id,name||'مشارك'); if(!peers.has(id)) await createPeer(id,true); });
 socket.on('signal',async({from,data,name})=>{
   participantNames.set(from,name||participantNames.get(from)||'مشارك');
   const pc=await createPeer(from,false);
-  if(data.sdp){ await pc.setRemoteDescription(data.sdp); if(data.sdp.type==='offer'){ const ans=await pc.createAnswer(); await pc.setLocalDescription(ans); socket.emit('signal',{target:from,data:{sdp:pc.localDescription}}); } }
-  else if(data.candidate){ try{ await pc.addIceCandidate(data.candidate); }catch{} }
+  if(data.sdp){
+    try{
+      // If both sides created offers at nearly the same time, the participant with the
+      // lexicographically smaller socket id keeps its offer; the other side rolls back.
+      if(data.sdp.type==='offer' && pc.signalingState==='have-local-offer'){
+        const polite=socket.id>from;
+        if(!polite) return;
+        await pc.setLocalDescription({type:'rollback'});
+      }
+      await pc.setRemoteDescription(data.sdp);
+      const queued=pendingCandidates.get(from)||[];
+      for(const c of queued){ try{await pc.addIceCandidate(c)}catch{} }
+      pendingCandidates.delete(from);
+      if(data.sdp.type==='offer'){
+        const ans=await pc.createAnswer(); await pc.setLocalDescription(ans);
+        socket.emit('signal',{target:from,data:{sdp:pc.localDescription}});
+      }
+    }catch(e){ console.error('SDP error',e); }
+  } else if(data.candidate){
+    if(pc.remoteDescription){ try{ await pc.addIceCandidate(data.candidate); }catch(e){ console.warn('ICE error',e); } }
+    else { const q=pendingCandidates.get(from)||[]; q.push(data.candidate); pendingCandidates.set(from,q); }
+  }
 });
 socket.on('user-left',({id})=>{ peers.get(id)?.close(); peers.delete(id); removeVideo(id); });
 
