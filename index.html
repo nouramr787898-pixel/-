@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#090909" />
   <title>تسجيل الاجتماعات AI</title>
   <link rel="icon" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=10.0.0" />
+  <link rel="stylesheet" href="style.css?v=11.0.0" />
 </head>
 <body>
   <header class="topbar">
@@ -14,27 +14,99 @@
     <button id="headerCreate" class="primary small">اجتماع جديد</button>
   </header>
 
+  
   <main id="landing" class="landing page">
-    <section class="hero card">
-      <div class="heroText">
-        <span class="badge">اجتماعات بسيطة • تلخيص تلقائي بالذكاء الاصطناعي</span>
-        <h1>اجتماعك في رابط واحد.<br><span>والـAI يلخصه بعد النهاية.</span></h1>
-        <p>أنشئ اجتماعًا، انسخ الرابط وأرسله لأي شخص. أنت تقبل أو ترفض طلب الدخول، وبعد انتهاء الاجتماع تحصل على ملخص وقرارات ومهام.</p>
+    <section class="homeWelcome card">
+      <div class="homeWelcomeText">
+        <span class="welcomeLabel">مرحبًا بكم • Design v11</span>
+        <h1>أهلًا بكم في <span>تلخيص الاجتماعات</span></h1>
+        <p>تم البرمجة بواسطة <strong>المبرمج نور خالد</strong><br>
+        إهداء إلى <strong>دكتور ياسر خوجة</strong> وإلى <strong>منصة أحكام بيزنس</strong></p>
         <div class="heroActions">
-          <button id="createMeeting" class="primary">إنشاء اجتماع</button>
+          <button id="createMeeting" class="primary">إنشاء اجتماع جديد</button>
           <button id="joinByCode" class="secondary">لدي رابط اجتماع</button>
         </div>
       </div>
-      <div class="heroPreview">
-        <div class="previewTop"><b>اجتماع فريق المشروع</b><span>3 مشاركين</span></div>
-        <div class="previewGrid"><div>أحمد</div><div>سارة</div><div>محمد</div></div>
-        <div class="previewBottom">ملخص AI جاهز بعد إنهاء الاجتماع</div>
+      <div class="homeWelcomeMark">
+        <div class="homeMic">🎙</div>
+        <b>AI Meeting Summary</b>
+        <span>صوت • فيديو • تلخيص ذكي</span>
       </div>
     </section>
-    <section class="threeCards">
-      <article class="card"><b>1</b><h3>أنشئ الرابط</h3><p>زر واحد فقط لإنشاء اجتماع جديد.</p></article>
-      <article class="card"><b>2</b><h3>اقبل المشاركين</h3><p>لن يدخل أي شخص قبل موافقتك.</p></article>
-      <article class="card"><b>3</b><h3>احصل على الملخص</h3><p>بعد الإنهاء، يحلل الـAI الاجتماع تلقائيًا.</p></article>
+
+    <section class="homeFeatureGrid">
+      <article class="homeFeature card">
+        <span>01</span>
+        <h3>رابط اجتماع واضح</h3>
+        <p>أنشئ رابطًا واحدًا وشاركه مع أي شخص بسهولة.</p>
+      </article>
+      <article class="homeFeature card">
+        <span>02</span>
+        <h3>دخول بموافقة المضيف</h3>
+        <p>أي مشارك ينتظر حتى تقبل دخوله إلى الاجتماع.</p>
+      </article>
+      <article class="homeFeature card">
+        <span>03</span>
+        <h3>ملخص AI بعد النهاية</h3>
+        <p>تفريغ الاجتماع واستخراج أهم النقاط والقرارات والمهام.</p>
+      </article>
+    </section>
+
+    <section class="homeMeetingPreview card">
+      <div class="previewHeading">
+        <div>
+          <span class="welcomeLabel">معاينة الاجتماع</span>
+          <h2>واجهة اجتماعات أوضح وأبسط</h2>
+        </div>
+        <div class="previewCounter">3 مشاركين</div>
+      </div>
+
+      <div class="previewPeople">
+        <div class="previewPerson">
+          <div class="previewPersonArt">
+            <svg viewBox="0 0 196 196" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="98" cy="98" r="91" fill="#161616" stroke="#594619"/>
+              <circle cx="98" cy="80" r="28" fill="#edbf95"/>
+              <path d="M65 57c12-13 44-16 58 0 7 8 10 18 10 31H57c0-12 2-22 8-31z" fill="#1d1d1d"/>
+              <circle cx="88" cy="82" r="2.2" fill="#2f241d"/>
+              <circle cx="108" cy="82" r="2.2" fill="#2f241d"/>
+              <path d="M88 94c6 6 14 6 20 0" fill="none" stroke="#8b4f40" stroke-width="3" stroke-linecap="round"/>
+              <path d="M49 158c8-31 26-48 49-48 24 0 42 17 50 48H49z" fill="#d4a63f"/>
+            </svg>
+          </div>
+          <b>أحمد</b><span>الميكروفون يعمل</span>
+        </div>
+        <div class="previewPerson">
+          <div class="previewPersonArt delay1">
+            <svg viewBox="0 0 196 196" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="98" cy="98" r="91" fill="#171717" stroke="#594619"/>
+              <path d="M73 58c9-18 37-26 54-10 10 10 12 24 12 40H58c0-10 3-20 15-30z" fill="#30221d"/>
+              <circle cx="98" cy="82" r="28" fill="#edbf95"/>
+              <circle cx="88" cy="82" r="2.2" fill="#2f241d"/>
+              <circle cx="108" cy="82" r="2.2" fill="#2f241d"/>
+              <path d="M88 94c6 6 14 6 20 0" fill="none" stroke="#8b4f40" stroke-width="3" stroke-linecap="round"/>
+              <path d="M60 109c8 23 21 34 37 34s29-11 37-34v49H60v-49z" fill="#d4a63f"/>
+              <path d="M48 157c6-33 24-49 50-49s44 16 50 49H48z" fill="#171717"/>
+            </svg>
+          </div>
+          <b>سارة</b><span>الكاميرا مغلقة</span>
+        </div>
+        <div class="previewPerson">
+          <div class="previewPersonArt delay2">
+            <svg viewBox="0 0 196 196" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="98" cy="98" r="91" fill="#151515" stroke="#594619"/>
+              <circle cx="98" cy="80" r="28" fill="#f1c39a"/>
+              <path d="M65 57c12-13 44-16 58 0 7 8 10 18 10 31H57c0-12 2-22 8-31z" fill="#221812"/>
+              <circle cx="88" cy="82" r="2.2" fill="#2f241d"/>
+              <circle cx="108" cy="82" r="2.2" fill="#2f241d"/>
+              <path d="M88 94c6 6 14 6 20 0" fill="none" stroke="#8b4f40" stroke-width="3" stroke-linecap="round"/>
+              <path d="M49 158c8-31 26-48 49-48 24 0 42 17 50 48H49z" fill="#3b82f6"/>
+            </svg>
+          </div>
+          <b>محمد</b><span>الميكروفون يعمل</span>
+        </div>
+      </div>
+      <div class="previewSummaryStrip">بعد إنهاء الاجتماع: ملخص + أهم النقاط + القرارات + المهام</div>
     </section>
   </main>
 
@@ -129,6 +201,6 @@
   <div id="toast" class="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
-  <script src="app.js?v=10.0.0"></script>
+  <script src="app.js?v=11.0.0"></script>
 </body>
 </html>
