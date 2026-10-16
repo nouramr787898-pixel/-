@@ -28,3 +28,12 @@
   .bigAvatar{width:62px;height:62px;font-size:26px}
   .waitingText{font-size:12px}
 }
+
+
+/* v6: explicit browser media permission flow */
+.permissionBox{margin:14px 0 18px;padding:16px;border:1px solid #3a321f;border-radius:14px;background:#11100d;text-align:right}
+.permissionBox b{display:block;color:#fff;font-size:16px;margin-bottom:6px}
+.permissionBox p{margin:0 0 12px;color:#cfcfcf;line-height:1.7;font-size:13px}
+.permissionStatus{margin-top:10px;color:#9fdbac;font-size:13px}
+.permissionStatus.error{color:#ff9d9d}
+#allowMediaBtn:disabled{opacity:.65;cursor:wait}

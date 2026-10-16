@@ -69,7 +69,13 @@ async function openPrejoin() {
   show('prejoin');
   $('#roomCodeText').textContent = 'رمز الاجتماع: ' + roomId;
   $('#enterRoom').textContent = isHost ? 'بدء الاجتماع' : 'طلب الانضمام';
-  await getMedia();
+  $('#permissionStatus').textContent = 'اضغط على زر السماح لتفعيل الميكروفون والكاميرا';
+}
+
+function permissionHelp(message = 'لم يتم السماح بالميكروفون. افتح علامة القفل بجانب عنوان الموقع واختر السماح للميكروفون والكاميرا ثم أعد المحاولة.') {
+  $('#permissionStatus').textContent = message;
+  $('#permissionStatus').classList.add('error');
+  toast('يلزم السماح للميكروفون من المتصفح');
 }
 
 async function getMedia() {
@@ -84,36 +90,106 @@ async function getMedia() {
     });
     $('#previewVideo').srcObject = localStream;
     $('#previewPlaceholder').style.display = 'none';
+    $('#permissionStatus').textContent = 'تم السماح بالميكروفون والكاميرا ✓';
+    $('#permissionStatus').classList.remove('error');
+    $('#allowMediaBtn').textContent = 'تم السماح ✓';
   } catch (e) {
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
         video: false,
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-      $('#previewPlaceholder').textContent = 'الكاميرا مغلقة';
-    } catch {
+      $('#previewPlaceholder').textContent = 'الكاميرا غير متاحة — الميكروفون يعمل';
+      $('#permissionStatus').textContent = 'تم السماح بالميكروفون ✓ — الكاميرا غير متاحة';
+      $('#permissionStatus').classList.remove('error');
+      $('#allowMediaBtn').textContent = 'تم السماح بالميكروفون ✓';
+    } catch (audioError) {
       localStream = new MediaStream();
-      $('#previewPlaceholder').textContent = 'الكاميرا والميكروفون غير متاحين';
+      $('#previewPlaceholder').textContent = 'الميكروفون والكاميرا غير مفعّلين';
+      const denied = e?.name === 'NotAllowedError' || audioError?.name === 'NotAllowedError';
+      permissionHelp(denied ? 'تم رفض الإذن. اضغط علامة القفل بجانب رابط الموقع واختر Allow للميكروفون والكاميرا.' : 'تعذر الوصول للميكروفون والكاميرا. تأكد من إعدادات الجهاز والمتصفح.');
     }
     $('#previewPlaceholder').style.display = 'grid';
   }
+  updatePreMediaButtons();
 }
-function setTrack(kind, on) { localStream?.getTracks().filter(t => t.kind === kind).forEach(t => t.enabled = on); }
-$('#preMic').onclick = () => {
-  const b = $('#preMic'); b.classList.toggle('active');
-  const on = b.classList.contains('active');
-  b.textContent = 'الميكروفون: ' + (on ? 'يعمل' : 'مغلق'); setTrack('audio', on);
+
+function updatePreMediaButtons() {
+  const mic = !!localStream?.getAudioTracks()?.find(t => t.readyState === 'live');
+  const cam = !!localStream?.getVideoTracks()?.find(t => t.readyState === 'live');
+  $('#preMic').classList.toggle('active', mic && (localStream.getAudioTracks()[0]?.enabled ?? false));
+  $('#preCam').classList.toggle('active', cam && (localStream.getVideoTracks()[0]?.enabled ?? false));
+  $('#preMic').textContent = mic ? 'الميكروفون: يعمل' : 'الميكروفون: يحتاج سماح';
+  $('#preCam').textContent = cam ? 'الكاميرا: تعمل' : 'الكاميرا: تحتاج سماح';
+}
+
+$('#allowMediaBtn').onclick = async () => {
+  $('#allowMediaBtn').disabled = true;
+  $('#allowMediaBtn').textContent = 'انتظر إشعار المتصفح…';
+  await getMedia();
+  $('#allowMediaBtn').disabled = false;
 };
-$('#preCam').onclick = () => {
-  const b = $('#preCam'); b.classList.toggle('active');
-  const on = b.classList.contains('active');
-  b.textContent = 'الكاميرا: ' + (on ? 'تعمل' : 'مغلقة'); setTrack('video', on);
-  $('#previewPlaceholder').style.display = on ? 'none' : 'grid';
+
+async function acquireTrack(kind) {
+  if (!navigator.mediaDevices?.getUserMedia) { toast('المتصفح لا يدعم الميكروفون أو الكاميرا'); return null; }
+  const constraints = kind === 'audio'
+    ? { video: false, audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }
+    : { audio: false, video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } };
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const track = kind === 'audio' ? stream.getAudioTracks()[0] : stream.getVideoTracks()[0];
+    if (!track) return null;
+    if (!localStream) localStream = new MediaStream();
+    for (const old of localStream.getTracks().filter(t => t.kind === kind)) { localStream.removeTrack(old); try { old.stop(); } catch {} }
+    localStream.addTrack(track);
+    if (kind === 'video') {
+      $('#previewVideo').srcObject = localStream;
+      $('#previewPlaceholder').style.display = 'none';
+      const lv = $('#v-local video'); if (lv) lv.srcObject = localStream;
+    }
+    for (const [id, pc] of peers) {
+      let sender = pc.getSenders().find(s => s.track?.kind === kind);
+      if (sender) await sender.replaceTrack(track);
+      else { pc.addTrack(track, localStream); await makeOffer(id, false); }
+    }
+    $('#permissionStatus') && ($('#permissionStatus').textContent = kind === 'audio' ? 'تم السماح بالميكروفون ✓' : 'تم السماح بالكاميرا ✓');
+    return track;
+  } catch (e) {
+    if (e?.name === 'NotAllowedError') permissionHelp();
+    else toast(kind === 'audio' ? 'تعذر تشغيل الميكروفون' : 'تعذر تشغيل الكاميرا');
+    return null;
+  }
+}
+
+function setTrack(kind, on) { localStream?.getTracks().filter(t => t.kind === kind).forEach(t => t.enabled = on); }
+$('#preMic').onclick = async () => {
+  let t = localStream?.getAudioTracks()[0];
+  if (!t || t.readyState !== 'live') t = await acquireTrack('audio');
+  if (!t) return;
+  t.enabled = !t.enabled;
+  $('#preMic').classList.toggle('active', t.enabled);
+  $('#preMic').textContent = 'الميكروفون: ' + (t.enabled ? 'يعمل' : 'مغلق');
+};
+$('#preCam').onclick = async () => {
+  let t = localStream?.getVideoTracks()[0];
+  if (!t || t.readyState !== 'live') t = await acquireTrack('video');
+  if (!t) return;
+  t.enabled = !t.enabled;
+  $('#preCam').classList.toggle('active', t.enabled);
+  $('#preCam').textContent = 'الكاميرا: ' + (t.enabled ? 'تعمل' : 'مغلقة');
+  $('#previewPlaceholder').style.display = t.enabled ? 'none' : 'grid';
 };
 
 $('#enterRoom').onclick = async () => {
   displayName = $('#displayName').value.trim() || (isHost ? 'صاحب الاجتماع' : 'مشارك');
-  if (!localStream) await getMedia();
+  if (!localStream?.getAudioTracks().length && !localStream?.getVideoTracks().length) await getMedia();
+  if (!localStream?.getAudioTracks().length) {
+    const mic = await acquireTrack('audio');
+    if (!mic) {
+      const continueWithoutMic = confirm('الميكروفون غير مفعّل. يمكنك الدخول للاستماع فقط، أو اضغط إلغاء واسمح للميكروفون من المتصفح.');
+      if (!continueWithoutMic) return;
+    }
+  }
   await unlockAudio();
   if (isHost) {
     approved = true;
@@ -432,8 +508,29 @@ function updateLocalButtons() {
   $('#micBtn').classList.toggle('off', !mic); $('#camBtn').classList.toggle('off', !cam);
   emitMediaState();
 }
-$('#micBtn').onclick = () => { const t = localStream?.getAudioTracks()[0]; if (!t) return toast('الميكروفون غير متاح'); t.enabled = !t.enabled; updateLocalButtons(); };
-$('#camBtn').onclick = () => { const t = localStream?.getVideoTracks()[0]; if (!t) return toast('الكاميرا غير متاحة'); t.enabled = !t.enabled; updateLocalButtons(); };
+$('#micBtn').onclick = async () => {
+  let t = localStream?.getAudioTracks()[0];
+  if (!t || t.readyState !== 'live') {
+    t = await acquireTrack('audio');
+    if (!t) return;
+    t.enabled = true;
+  } else {
+    t.enabled = !t.enabled;
+  }
+  updateLocalButtons();
+};
+$('#camBtn').onclick = async () => {
+  let t = localStream?.getVideoTracks()[0];
+  if (!t || t.readyState !== 'live') {
+    t = await acquireTrack('video');
+    if (!t) return;
+    t.enabled = true;
+  } else {
+    t.enabled = !t.enabled;
+  }
+  const lv = $('#v-local video'); if (lv) lv.srcObject = localStream;
+  updateLocalButtons();
+};
 
 $('#screenBtn').onclick = async () => {
   try {

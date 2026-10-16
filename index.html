@@ -43,7 +43,13 @@
       <img src="logo.png" class="joinLogo" alt="logo">
       <h2 id="prejoinTitle">الانضمام للاجتماع</h2>
       <p id="roomCodeText" class="muted"></p>
-      <div class="previewWrap"><video id="previewVideo" autoplay muted playsinline></video><div id="previewPlaceholder">الكاميرا مغلقة</div></div>
+      <div class="previewWrap"><video id="previewVideo" autoplay muted playsinline></video><div id="previewPlaceholder">الكاميرا والميكروفون لم يتم السماح بهما بعد</div></div>
+      <div id="permissionBox" class="permissionBox">
+        <b>فعّل الميكروفون والكاميرا قبل الدخول</b>
+        <p>اضغط الزر التالي، ثم اختر <strong>Allow / سماح</strong> من إشعار المتصفح.</p>
+        <button id="allowMediaBtn" class="primary full" type="button">السماح بالميكروفون والكاميرا</button>
+        <div id="permissionStatus" class="permissionStatus">لم يتم طلب الإذن بعد</div>
+      </div>
       <label>اسمك</label>
       <input id="displayName" class="textInput" placeholder="اكتب اسمك" maxlength="40" />
       <div class="preControls">
