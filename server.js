@@ -72,55 +72,128 @@ app.post('/api/livekit-token', async (req, res) => {
   }
 });
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function geminiFetchWithRetry(url, options, attempts = 4) {
+  let lastPayload = null;
+  let lastStatus = 500;
+  for (let i = 0; i < attempts; i++) {
+    const response = await fetch(url, options);
+    let payload = null;
+    try { payload = await response.json(); } catch { payload = {}; }
+    if (response.ok) return { response, payload };
+    lastPayload = payload; lastStatus = response.status;
+    const retryable = response.status === 429 || response.status === 500 || response.status === 503;
+    if (!retryable || i === attempts - 1) break;
+    const delay = [2500, 6000, 12000, 20000][i] || 20000;
+    console.warn(`Gemini temporary error ${response.status}; retrying in ${delay}ms`);
+    await sleep(delay);
+  }
+  const msg = lastPayload?.error?.message || `Gemini API error (${lastStatus})`;
+  const err = new Error(msg); err.status = lastStatus; throw err;
+}
+
+async function uploadGeminiFile(filePath, mimeType, displayName) {
+  const stat = fs.statSync(filePath);
+  const startResp = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
+    method: 'POST',
+    headers: {
+      'X-Goog-Upload-Protocol': 'resumable',
+      'X-Goog-Upload-Command': 'start',
+      'X-Goog-Upload-Header-Content-Length': String(stat.size),
+      'X-Goog-Upload-Header-Content-Type': mimeType,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ file: { display_name: displayName } })
+  });
+  if (!startResp.ok) {
+    let data={}; try{data=await startResp.json();}catch{}
+    throw new Error(data?.error?.message || `Gemini file upload init failed (${startResp.status})`);
+  }
+  const uploadUrl = startResp.headers.get('x-goog-upload-url');
+  if (!uploadUrl) throw new Error('Gemini did not return an upload URL.');
+  const bytes = fs.readFileSync(filePath);
+  const finishResp = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Length': String(bytes.length),
+      'X-Goog-Upload-Offset': '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
+      'Content-Type': mimeType,
+    },
+    body: bytes
+  });
+  const finishData = await finishResp.json();
+  if (!finishResp.ok) throw new Error(finishData?.error?.message || `Gemini file upload failed (${finishResp.status})`);
+  let file = finishData.file;
+  if (!file?.name || !file?.uri) throw new Error('Gemini file upload returned no file reference.');
+
+  // Larger audio can need a short processing period before it is usable.
+  for (let i=0; i<30 && file.state === 'PROCESSING'; i++) {
+    await sleep(2000);
+    const check = await fetch(`https://generativelanguage.googleapis.com/v1beta/${file.name}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`);
+    const checkData = await check.json();
+    if (!check.ok) throw new Error(checkData?.error?.message || 'Could not check Gemini file status.');
+    file = checkData;
+  }
+  if (file.state === 'FAILED') throw new Error('Gemini could not process the meeting recording.');
+  return file;
+}
+
+async function deleteGeminiFile(fileName) {
+  if (!fileName) return;
+  try { await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, { method:'DELETE' }); } catch {}
+}
+
 app.post('/api/summarize', upload.single('audio'), async (req, res) => {
   if (!process.env.GEMINI_API_KEY) return res.status(503).json({ error: 'GEMINI_API_KEY is not configured.' });
   if (!req.file) return res.status(400).json({ error: 'Audio file is required.' });
 
   const p = req.file.path;
+  let remoteFile = null;
   try {
-    const audioBytes = fs.readFileSync(p).toString('base64');
     const mimeType = req.file.mimetype || 'audio/webm';
     const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    const size = req.file.size || fs.statSync(p).size;
+    const isLongMeeting = size > 8 * 1024 * 1024;
 
-    const prompt = `أنت مساعد اجتماعات محترف. استمع إلى تسجيل الاجتماع بالكامل، ثم أعد JSON صالح فقط بدون Markdown بالشكل التالي:
+    const prompt = `أنت مساعد اجتماعات محترف. استمع إلى تسجيل الاجتماع بالكامل من البداية للنهاية ثم أعد JSON صالح فقط بدون Markdown بالشكل التالي:
 {
-  "transcript":"النص الكامل المنطوق في الاجتماع قدر الإمكان",
+  "transcript":"${isLongMeeting ? 'ملاحظات نصية موسعة تغطي أهم ما قيل بترتيب زمني، بدون محاولة نسخ كل كلمة إذا كان التسجيل طويلًا جدًا' : 'النص الكامل المنطوق في الاجتماع قدر الإمكان'}",
   "title":"عنوان قصير للاجتماع",
-  "summary":"ملخص واضح ومركز بالعربية",
+  "summary":"ملخص واضح وشامل بالعربية يغطي الاجتماع كاملًا",
   "keyPoints":["أهم نقطة"],
   "decisions":["قرار تم اتخاذه"],
   "actions":[{"task":"المهمة","owner":"المسؤول إن ذُكر وإلا فارغ","deadline":"الموعد إن ذُكر وإلا فارغ"}],
   "followUps":["نقطة متابعة"]
 }
-لا تخترع أسماء أو قرارات أو مواعيد لم تُذكر. إذا لم توجد عناصر في قسم معين أعد مصفوفة فارغة. إذا كانت المحادثة بالعربية فاحتفظ بالعربية، وإذا كانت بلغة أخرى فاجعل الملخص بالعربية مع الحفاظ على المعنى.`;
+ركز بشكل خاص على عدم فقدان القرارات والمهام في الاجتماعات الطويلة. لا تخترع أسماء أو قرارات أو مواعيد لم تُذكر. إذا لم توجد عناصر في قسم معين أعد مصفوفة فارغة. إذا كانت المحادثة بالعربية فاحتفظ بالعربية، وإذا كانت بلغة أخرى فاجعل الملخص بالعربية مع الحفاظ على المعنى.`;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType, data: audioBytes } }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      const message = payload?.error?.message || `Gemini API error (${response.status})`;
-      throw new Error(message);
+    let audioPart;
+    if (isLongMeeting) {
+      console.log(`Long meeting detected (${Math.round(size/1024/1024)}MB): using Gemini Files API`);
+      remoteFile = await uploadGeminiFile(p, mimeType, `meeting-${Date.now()}.webm`);
+      audioPart = { fileData: { mimeType: remoteFile.mimeType || mimeType, fileUri: remoteFile.uri } };
+    } else {
+      const audioBytes = fs.readFileSync(p).toString('base64');
+      audioPart = { inlineData: { mimeType, data: audioBytes } };
     }
+
+    const requestBody = {
+      contents: [{ role:'user', parts:[{ text: prompt }, audioPart] }],
+      generationConfig: {
+        temperature: 0.15,
+        responseMimeType: 'application/json',
+        maxOutputTokens: isLongMeeting ? 16384 : 8192
+      }
+    };
+
+    const { payload } = await geminiFetchWithRetry(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+      body: JSON.stringify(requestBody)
+    }, 4);
 
     let raw = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('').trim() || '';
     raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```$/,'').trim();
@@ -128,7 +201,7 @@ app.post('/api/summarize', upload.single('audio'), async (req, res) => {
 
     let parsed;
     try { parsed = JSON.parse(raw); }
-    catch { throw new Error('Gemini returned an invalid summary format. Please try again.'); }
+    catch { throw new Error('Gemini returned an incomplete summary. Please press retry after a moment.'); }
 
     const transcript = parsed.transcript || '';
     const summary = {
@@ -140,11 +213,14 @@ app.post('/api/summarize', upload.single('audio'), async (req, res) => {
       followUps: Array.isArray(parsed.followUps) ? parsed.followUps : [],
     };
 
-    res.json({ transcript, summary, provider: 'gemini', model });
+    res.json({ transcript, summary, provider:'gemini', model, longMeeting:isLongMeeting });
   } catch (e) {
     console.error('Gemini summarize error:', e);
-    res.status(500).json({ error: e?.message || 'Gemini processing failed.' });
+    let message = e?.message || 'Gemini processing failed.';
+    if (/high demand|overloaded|unavailable/i.test(message)) message = 'خدمة Gemini عليها ضغط مؤقت. الموقع حاول تلقائيًا عدة مرات؛ انتظر دقيقة ثم أعد محاولة التلخيص.';
+    res.status(e?.status === 429 ? 429 : 500).json({ error: message });
   } finally {
+    if (remoteFile?.name) await deleteGeminiFile(remoteFile.name);
     fs.unlink(p, () => {});
   }
 });
