@@ -284,28 +284,119 @@ function miniAvatarMarkup(name='', seed='') {
   const variant = pickAvatarVariant(seed || name);
   return `<div class="avatarMiniWrap">${avatarSVG(variant).replace('avatarFigure', 'personVectorMini')}</div>`;
 }
+function tileActionsMarkup() {
+  return '<div class="tileActions">'
+    + '<button class="tileAction pinTileBtn" type="button">تثبيت</button>'
+    + '<button class="tileAction expandTileBtn" type="button">تكبير</button>'
+    + '</div>';
+}
+function bindTileActions(tile) {
+  if (!tile || tile.dataset.actionsBound === '1') return;
+  tile.dataset.actionsBound = '1';
+
+  tile.querySelector('.pinTileBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePinTile(tile);
+  });
+  tile.querySelector('.expandTileBtn')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await toggleTileFullscreen(tile);
+  });
+}
 function addLocalTile() {
   let tile = $('#v-local');
   if (!tile) {
     tile = document.createElement('div'); tile.id='v-local'; tile.className='videoTile local';
-    tile.innerHTML = '<video autoplay muted playsinline></video>' + avatarStageMarkup(displayName || 'أنت', 'local-'+(displayName||'')) + '<div class="videoLabel"></div>';
+    tile.innerHTML = '<video autoplay muted playsinline></video>'
+      + avatarStageMarkup(displayName || 'أنت', 'local-'+(displayName||''))
+      + tileActionsMarkup()
+      + '<div class="videoLabel"></div>';
     $('#videoGrid').appendChild(tile);
   }
   tile.querySelector('.videoLabel').textContent = displayName + ' (أنت)';
+  bindTileActions(tile);
   updateGridLayout();
 }
 function ensureRemoteTile(id, name='مشارك') {
   let tile = document.getElementById(tileId(id));
   if (!tile) {
     tile = document.createElement('div'); tile.id=tileId(id); tile.className='videoTile remote waitingMedia';
-    tile.innerHTML = '<video autoplay playsinline></video><audio autoplay playsinline></audio>' + avatarStageMarkup(name, id+'-'+name).replace('</div></div>', '</div><div class="waitingText">جاري الاتصال بالصوت والصورة…</div></div>') + '<div class="connectionBadge warn">جاري الاتصال…</div><div class="videoLabel"></div>';
+    tile.innerHTML = '<video autoplay playsinline></video><audio autoplay playsinline></audio>'
+      + avatarStageMarkup(name, id+'-'+name).replace('</div></div>', '</div><div class="waitingText">جاري الاتصال بالصوت والصورة…</div></div>')
+      + tileActionsMarkup()
+      + '<div class="connectionBadge warn">جاري الاتصال…</div><div class="videoLabel"></div>';
     $('#videoGrid').appendChild(tile);
   }
   tile.querySelector('.videoLabel').textContent = name;
+  bindTileActions(tile);
   updateGridLayout();
   return tile;
 }
-function removeRemoteTile(id) { document.getElementById(tileId(id))?.remove(); updateGridLayout(); }
+
+let pinnedTileId = null;
+
+function syncPinnedUI() {
+  const grid = $('#videoGrid');
+  const tiles = [...grid.querySelectorAll('.videoTile')];
+  grid.classList.toggle('hasPinnedTile', !!pinnedTileId);
+
+  for (const tile of tiles) {
+    const pinned = tile.id === pinnedTileId;
+    tile.classList.toggle('pinnedTile', pinned);
+    tile.classList.toggle('hiddenByPin', !!pinnedTileId && !pinned);
+    const btn = tile.querySelector('.pinTileBtn');
+    if (btn) btn.textContent = pinned ? 'إلغاء التثبيت' : 'تثبيت';
+  }
+}
+
+function togglePinTile(tile) {
+  if (!tile) return;
+  pinnedTileId = pinnedTileId === tile.id ? null : tile.id;
+  syncPinnedUI();
+  updateGridLayout();
+  toast(pinnedTileId ? 'تم تثبيت المشارك' : 'تم إلغاء تثبيت المشارك');
+}
+
+async function toggleTileFullscreen(tile) {
+  if (!tile) return;
+  const btn = tile.querySelector('.expandTileBtn');
+
+  try {
+    if (document.fullscreenElement === tile) {
+      await document.exitFullscreen();
+      if (btn) btn.textContent = 'تكبير';
+      return;
+    }
+    if (tile.requestFullscreen) {
+      await tile.requestFullscreen();
+      if (btn) btn.textContent = 'تصغير';
+      return;
+    }
+  } catch (e) {
+    console.warn('fullscreen unavailable', e);
+  }
+
+  // iOS Safari fallback: use an in-page expanded overlay.
+  const isExpanded = tile.classList.toggle('tileExpanded');
+  document.body.classList.toggle('tileExpandedOpen', isExpanded);
+  if (btn) btn.textContent = isExpanded ? 'تصغير' : 'تكبير';
+}
+
+document.addEventListener('fullscreenchange', () => {
+  document.querySelectorAll('.expandTileBtn').forEach(btn => btn.textContent = 'تكبير');
+  if (document.fullscreenElement) {
+    document.fullscreenElement.querySelector('.expandTileBtn')?.replaceChildren(document.createTextNode('تصغير'));
+  }
+});
+
+
+function removeRemoteTile(id) {
+  const idValue = tileId(id);
+  document.getElementById(idValue)?.remove();
+  if (pinnedTileId === idValue) pinnedTileId = null;
+  syncPinnedUI();
+  updateGridLayout();
+}
 function updateGridLayout() {
   const grid=$('#videoGrid'); const count=grid?.children.length||0;
   grid.classList.remove('count-1','count-2','count-3','count-4','count-many');
@@ -397,33 +488,58 @@ $('#flipCamBtn').onclick = async () => {
 
   const previousFacing = currentFacingMode;
   const nextFacing = previousFacing === 'user' ? 'environment' : 'user';
+  const cameraPub = lkRoom.localParticipant.getTrackPublication(Track.Source.Camera);
+  const cameraTrack = cameraPub?.track;
 
   try {
-    // Mobile Safari/Chrome: restart the published camera track with the other facing mode.
-    await lkRoom.localParticipant.setCameraEnabled(false);
-    currentFacingMode = nextFacing;
-    await lkRoom.localParticipant.setCameraEnabled(true, { facingMode: currentFacingMode });
+    let switched = false;
 
-    desiredCam = true;
+    // Preferred LiveKit path: restart the existing camera track with a new facing mode.
+    if (cameraTrack?.restartTrack) {
+      await cameraTrack.restartTrack({ facingMode: nextFacing });
+      switched = true;
+    }
+
+    // Fallback for mobile browsers that ignore facingMode: switch to another videoinput device.
+    const devices = (await navigator.mediaDevices.enumerateDevices())
+      .filter(d => d.kind === 'videoinput');
+
+    if (devices.length > 1) {
+      const currentDeviceId = cameraTrack?.mediaStreamTrack?.getSettings?.().deviceId;
+      let target = null;
+
+      const labelsAvailable = devices.some(d => d.label);
+      if (labelsAvailable) {
+        const backPattern = /(back|rear|environment|الخلف|خلف)/i;
+        const frontPattern = /(front|user|facetime|الأمام|امام)/i;
+        target = devices.find(d => nextFacing === 'environment'
+          ? backPattern.test(d.label)
+          : frontPattern.test(d.label));
+      }
+
+      if (!target) {
+        const idx = devices.findIndex(d => d.deviceId === currentDeviceId);
+        target = devices[(idx >= 0 ? idx + 1 : 1) % devices.length];
+      }
+
+      if (target?.deviceId && target.deviceId !== currentDeviceId) {
+        await lkRoom.switchActiveDevice('videoinput', target.deviceId);
+        switched = true;
+      }
+    }
+
+    if (!switched) throw new Error('No alternative camera found');
+
+    currentFacingMode = nextFacing;
+    $('#v-local')?.classList.toggle('rearCamera', currentFacingMode === 'environment');
     renderLocalLiveKitVideo();
-    updateLocalButtons();
     toast(currentFacingMode === 'environment'
       ? 'تم تشغيل الكاميرا الخلفية'
       : 'تم تشغيل الكاميرا الأمامية');
   } catch (e) {
     console.error('flip camera', e);
     currentFacingMode = previousFacing;
-
-    // Recover the original camera so a failed switch never breaks the meeting.
-    try {
-      await lkRoom.localParticipant.setCameraEnabled(true, { facingMode: currentFacingMode });
-      desiredCam = true;
-      renderLocalLiveKitVideo();
-      updateLocalButtons();
-    } catch (restoreError) {
-      console.error('restore camera', restoreError);
-    }
-    toast('هذا الجهاز أو المتصفح لم يسمح بتبديل الكاميرا');
+    toast('لم يتم العثور على كاميرا أخرى متاحة على هذا الجهاز');
   }
 };
 

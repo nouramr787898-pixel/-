@@ -1,1 +1,1 @@
-AI Meeting build v17.0.0 - mobile camera variable fix
+AI Meeting build v18.0.0 - camera switch + participant pin/fullscreen
