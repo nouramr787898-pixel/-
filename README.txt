@@ -1,22 +1,9 @@
-AI Meeting v5
+AI Meeting v7 — LiveKit media engine
 
-Main fixes:
-- Host approval is completed server-side in one step.
-- Accepted guest automatically opens the meeting UI.
-- One visible video tile per participant appears immediately.
-- 2 participants = split screen, 3/4 participants = 2x2 grid.
-- New guest alone initiates WebRTC offers, preventing offer collisions.
-- Remote audio autoplay fallback button added.
-- ICE restart/reconnection logic added.
-- Optional TURN variables supported for reliable calls across different networks.
-
-Railway variables:
+Required Railway variables:
 OPENAI_API_KEY=...
+LIVEKIT_URL=wss://YOUR-PROJECT.livekit.cloud
+LIVEKIT_API_KEY=...
+LIVEKIT_API_SECRET=...
 
-Optional/recommended for production media reliability:
-TURN_URLS=...
-TURN_USERNAME=...
-TURN_CREDENTIAL=...
-
-Start command:
-npm start
+The LiveKit secret stays only on Railway/server. Never put it in app.js or GitHub.
