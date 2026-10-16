@@ -233,15 +233,63 @@ async function connectLiveKit() {
   await unlockAudio();
 }
 
+
 function tileId(id) { return 'v-' + String(id).replace(/[^a-zA-Z0-9_-]/g,'_'); }
+function hashSeed(text='') { let h=0; const t=String(text); for (let i=0;i<t.length;i++) h=(h*31 + t.charCodeAt(i))>>>0; return h; }
+function pickAvatarVariant(seed='') { const variants=['male-a','female-a','male-b','female-b']; return variants[hashSeed(seed)%variants.length]; }
+function avatarSVG(variant='male-a') {
+  const female = variant.startsWith('female');
+  const alt = variant.endsWith('b');
+  const skin = alt ? '#f1c39a' : '#edbf95';
+  const top = female ? (alt ? '#7d4cf4' : '#d4a63f') : (alt ? '#3b82f6' : '#d4a63f');
+  const jacket = female ? (alt ? '#1c1b3f' : '#171717') : (alt ? '#151d2d' : '#171717');
+  const hair = female ? (alt ? '#1d1d1d' : '#30221d') : (alt ? '#221812' : '#1d1d1d');
+  const accent = female ? '#f5d07f' : '#d4a63f';
+  const headTop = female ? `<path d="M73 58c9-18 37-26 54-10 10 10 12 24 12 40H58c0-10 3-20 15-30z" fill="${hair}"/>` : `<path d="M65 57c12-13 44-16 58 0 7 8 10 18 10 31H57c0-12 2-22 8-31z" fill="${hair}"/>`;
+  const extra = female
+    ? `<path d="M60 109c8 23 21 34 37 34s29-11 37-34v49H60v-49z" fill="${top}"/><path d="M48 157c6-33 24-49 50-49s44 16 50 49H48z" fill="${jacket}"/>`
+    : `<rect x="61" y="108" width="74" height="52" rx="18" fill="${jacket}"/><path d="M49 158c8-31 26-48 49-48 24 0 42 17 50 48H49z" fill="${top}"/><path d="M96 108h8v28l-4 7-4-7z" fill="${accent}"/>`;
+  return `
+  <div class="avatarFigure ${variant}">
+    <svg viewBox="0 0 196 196" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="bg-${variant}" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.12)"/>
+          <stop offset="100%" stop-color="rgba(212,166,63,0.06)"/>
+        </linearGradient>
+      </defs>
+      <circle cx="98" cy="98" r="91" fill="url(#bg-${variant})" stroke="rgba(255,255,255,0.09)" />
+      <circle class="spark" cx="38" cy="52" r="4" fill="${accent}" />
+      <circle class="spark s2" cx="154" cy="42" r="5" fill="${accent}" />
+      <circle class="spark s3" cx="162" cy="136" r="4" fill="${accent}" />
+      <ellipse cx="98" cy="168" rx="54" ry="10" fill="rgba(0,0,0,.22)"/>
+      ${headTop}
+      <circle cx="98" cy="82" r="28" fill="${skin}"/>
+      <circle cx="88" cy="82" r="2.2" fill="#2f241d"/>
+      <circle cx="108" cy="82" r="2.2" fill="#2f241d"/>
+      <path d="M88 94c6 6 14 6 20 0" fill="none" stroke="#8b4f40" stroke-width="3" stroke-linecap="round"/>
+      <rect x="86" y="103" width="24" height="12" rx="5" fill="${skin}"/>
+      ${extra}
+      <rect x="70" y="149" width="56" height="14" rx="7" fill="rgba(255,255,255,.06)"/>
+      <rect x="77" y="152" width="42" height="4" rx="2" fill="rgba(255,255,255,.12)"/>
+    </svg>
+  </div>`;
+}
+function avatarStageMarkup(name='', variantSeed='') {
+  const variant = pickAvatarVariant(variantSeed || name);
+  return `<div class="avatarStage ${variant}">${avatarSVG(variant)}<div class="avatarCaption">كاميرا مغلقة</div></div>`;
+}
+function miniAvatarMarkup(name='', seed='') {
+  const variant = pickAvatarVariant(seed || name);
+  return `<div class="avatarMiniWrap">${avatarSVG(variant).replace('avatarFigure', 'personVectorMini')}</div>`;
+}
 function addLocalTile() {
   let tile = $('#v-local');
   if (!tile) {
     tile = document.createElement('div'); tile.id='v-local'; tile.className='videoTile local';
-    tile.innerHTML = '<video autoplay muted playsinline></video><div class="avatarStage"><div class="bigAvatar"></div></div><div class="videoLabel"></div>';
+    tile.innerHTML = '<video autoplay muted playsinline></video>' + avatarStageMarkup(displayName || 'أنت', 'local-'+(displayName||'')) + '<div class="videoLabel"></div>';
     $('#videoGrid').appendChild(tile);
   }
-  tile.querySelector('.bigAvatar').textContent = (displayName || 'أ').slice(0,1);
   tile.querySelector('.videoLabel').textContent = displayName + ' (أنت)';
   updateGridLayout();
 }
@@ -249,10 +297,9 @@ function ensureRemoteTile(id, name='مشارك') {
   let tile = document.getElementById(tileId(id));
   if (!tile) {
     tile = document.createElement('div'); tile.id=tileId(id); tile.className='videoTile remote waitingMedia';
-    tile.innerHTML = '<video autoplay playsinline></video><audio autoplay playsinline></audio><div class="avatarStage"><div class="bigAvatar"></div><div class="waitingText">جاري الاتصال بالصوت والصورة…</div></div><div class="connectionBadge warn">جاري الاتصال…</div><div class="videoLabel"></div>';
+    tile.innerHTML = '<video autoplay playsinline></video><audio autoplay playsinline></audio>' + avatarStageMarkup(name, id+'-'+name).replace('</div></div>', '</div><div class="waitingText">جاري الاتصال بالصوت والصورة…</div></div>') + '<div class="connectionBadge warn">جاري الاتصال…</div><div class="videoLabel"></div>';
     $('#videoGrid').appendChild(tile);
   }
-  tile.querySelector('.bigAvatar').textContent = (name || 'م').slice(0,1);
   tile.querySelector('.videoLabel').textContent = name;
   updateGridLayout();
   return tile;
@@ -371,8 +418,7 @@ function renderParticipants(list,hostId) {
   const box=$('#participantsList'); box.innerHTML='';
   for(const p of list){
     const row=document.createElement('div'); row.className='participantRow';
-    row.innerHTML='<div class="participantInfo"><div class="avatar"></div><div><b class="pname"></b><div class="personMeta"></div></div></div><span class="hostTag hidden">المضيف</span>';
-    row.querySelector('.avatar').textContent=(p.name||'م').slice(0,1);
+    row.innerHTML='<div class="participantInfo">'+miniAvatarMarkup(p.name||'م', p.id+'-'+(p.name||''))+'<div><b class="pname"></b><div class="personMeta"></div></div></div><span class="hostTag hidden">المضيف</span>';
     row.querySelector('.pname').textContent=p.name+(p.id===socket.id?' (أنت)':'');
     row.querySelector('.personMeta').textContent=[p.mic===false?'الميكروفون مغلق':'الميكروفون يعمل',p.cam===false?'الكاميرا مغلقة':'الكاميرا تعمل'].join(' • ');
     if(p.id===hostId) row.querySelector('.hostTag').classList.remove('hidden'); box.appendChild(row);
