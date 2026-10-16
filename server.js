@@ -25,7 +25,15 @@ const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 120 * 1024 * 1024
 const port = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(__dirname, { index: 'index.html' }));
+app.use((req,res,next)=>{
+  if (req.path.endsWith('.html') || req.path.endsWith('.css') || req.path.endsWith('.js') || req.path === '/') {
+    res.set('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma','no-cache');
+    res.set('Expires','0');
+  }
+  next();
+});
+app.use(express.static(__dirname, { index: 'index.html', etag: false, maxAge: 0 }));
 app.get('/health', (_req, res) => res.json({ ok: true, livekit: !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET) }));
 
 const rooms = new Map();
@@ -72,7 +80,7 @@ app.post('/api/summarize', upload.single('audio'), async (req, res) => {
   try {
     const audioBytes = fs.readFileSync(p).toString('base64');
     const mimeType = req.file.mimetype || 'audio/webm';
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
 
     const prompt = `أنت مساعد اجتماعات محترف. استمع إلى تسجيل الاجتماع بالكامل، ثم أعد JSON صالح فقط بدون Markdown بالشكل التالي:
