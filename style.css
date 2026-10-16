@@ -350,3 +350,10 @@ body.tileExpandedOpen{overflow:hidden}
   .tileActions{left:10px;bottom:10px}
   .tileAction{padding:9px 11px;font-size:12px}
 }
+
+
+/* ===== v19 real camera-state overlay fix ===== */
+.videoTile.cameraOn .avatarStage{display:none!important}
+.videoTile.cameraOn .avatarCaption{display:none!important}
+.videoTile.cameraOff .avatarStage{display:flex!important}
+.videoTile.cameraOn video{visibility:visible!important;opacity:1!important}

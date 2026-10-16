@@ -1,1 +1,1 @@
-AI Meeting build v18.0.0 - camera switch + participant pin/fullscreen
+AI Meeting build v19.0.0 - camera overlay state fix

@@ -431,26 +431,63 @@ function updateTileMediaState(participant) {
   const tile = document.getElementById(tileId(participant.identity)); if (!tile) return;
   const camPub = participant.getTrackPublication?.(Track.Source.Camera);
   const camOn = !!(camPub && !camPub.isMuted && camPub.track);
+
+  tile.classList.toggle('cameraOn', camOn);
+  tile.classList.toggle('cameraOff', !camOn);
   tile.querySelector('.avatarStage')?.classList.toggle('hidden', camOn);
+
+  const caption = tile.querySelector('.avatarCaption');
+  if (caption) caption.textContent = camOn ? '' : 'كاميرا مغلقة';
 }
+
+function syncLocalCameraOverlay() {
+  const tile = $('#v-local');
+  if (!tile) return;
+  const pub = lkRoom?.localParticipant?.getTrackPublication?.(Track.Source.Camera);
+  const cameraReallyOn = !!(pub && !pub.isMuted && pub.track && desiredCam);
+
+  tile.classList.toggle('cameraOn', cameraReallyOn);
+  tile.classList.toggle('cameraOff', !cameraReallyOn);
+  tile.querySelector('.avatarStage')?.classList.toggle('hidden', cameraReallyOn);
+
+  const caption = tile.querySelector('.avatarCaption');
+  if (caption) caption.textContent = cameraReallyOn ? '' : 'كاميرا مغلقة';
+}
+
 function renderLocalLiveKitVideo() {
   if (!lkRoom) return;
-  const localTile = $('#v-local');
-  localTile?.classList.toggle('rearCamera', currentFacingMode === 'environment');
   const tile=$('#v-local'); if(!tile) return;
   const video=tile.querySelector('video');
   const pub=lkRoom.localParticipant.getTrackPublication(Track.Source.Camera);
-  if (pub?.track) {
-    try { pub.track.attach(video); } catch { video.srcObject = new MediaStream([pub.track.mediaStreamTrack]); }
-    tile.querySelector('.avatarStage')?.classList.toggle('hidden', !desiredCam);
-  } else tile.querySelector('.avatarStage')?.classList.remove('hidden');
+
+  tile.classList.toggle('rearCamera', currentFacingMode === 'environment');
+
+  if (pub?.track && !pub.isMuted && desiredCam) {
+    try { pub.track.attach(video); }
+    catch { video.srcObject = new MediaStream([pub.track.mediaStreamTrack]); }
+
+    video.style.display = 'block';
+    video.play().catch(() => {});
+  } else {
+    try { video.pause(); } catch {}
+  }
+
+  syncLocalCameraOverlay();
 }
 function onLocalTrackPublished(publication) {
-  if (publication.source === Track.Source.Camera) renderLocalLiveKitVideo();
-  if (publication.source === Track.Source.Microphone && publication.track) connectTrackToRecorder(publication.track, 'local-'+publication.trackSid);
+  if (publication.source === Track.Source.Camera) {
+    desiredCam = true;
+    renderLocalLiveKitVideo();
+    syncLocalCameraOverlay();
+  }
+  if (publication.source === Track.Source.Microphone && publication.track) {
+    connectTrackToRecorder(publication.track, 'local-'+publication.trackSid);
+  }
 }
 function onLocalTrackUnpublished(publication) {
-  if (publication.source === Track.Source.Camera) $('#v-local .avatarStage')?.classList.remove('hidden');
+  if (publication.source === Track.Source.Camera) {
+    syncLocalCameraOverlay();
+  }
 }
 
 function emitMediaState() {
@@ -461,7 +498,7 @@ function updateLocalButtons() {
   $('#camBtn').textContent = desiredCam ? 'إيقاف الكاميرا' : 'تشغيل الكاميرا';
   $('#micBtn').classList.toggle('off', !desiredMic); $('#camBtn').classList.toggle('off', !desiredCam);
   emitMediaState();
-  $('#v-local .avatarStage')?.classList.toggle('hidden', desiredCam);
+  syncLocalCameraOverlay();
 }
 $('#micBtn').onclick = async () => {
   if (!lkRoom) return toast('الاتصال لم يكتمل بعد');
