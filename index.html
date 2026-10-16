@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#090909" />
   <title>تسجيل الاجتماعات AI</title>
   <link rel="icon" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=11.0.0" />
+  <link rel="stylesheet" href="style.css?v=12.0.0" />
 </head>
-<body>
+<body data-build="12.0.0">
   <header class="topbar">
     <a class="brand" href="/"><img src="logo.png" alt="الشعار"><span>اجتماعات AI</span></a>
     <button id="headerCreate" class="primary small">اجتماع جديد</button>
@@ -18,19 +18,14 @@
   <main id="landing" class="landing page">
     <section class="homeWelcome card">
       <div class="homeWelcomeText">
-        <span class="welcomeLabel">مرحبًا بكم • Design v11</span>
+        <span class="welcomeLabel">مرحبًا بكم</span>
         <h1>أهلًا بكم في <span>تلخيص الاجتماعات</span></h1>
         <p>تم البرمجة بواسطة <strong>المبرمج نور خالد</strong><br>
-        إهداء إلى <strong>دكتور ياسر خوجة</strong> وإلى <strong>منصة أحكام بيزنس</strong></p>
+        إهداء إلى <strong>دكتور ياسر خوجة</strong> وإلى <strong>أستاذة هبة الغامدي</strong></p>
         <div class="heroActions">
           <button id="createMeeting" class="primary">إنشاء اجتماع جديد</button>
           <button id="joinByCode" class="secondary">لدي رابط اجتماع</button>
         </div>
-      </div>
-      <div class="homeWelcomeMark">
-        <div class="homeMic">🎙</div>
-        <b>AI Meeting Summary</b>
-        <span>صوت • فيديو • تلخيص ذكي</span>
       </div>
     </section>
 
@@ -142,13 +137,9 @@
 
     <section class="welcomeBanner card">
       <div class="welcomeBannerText">
-        <span class="welcomeLabel">مرحبًا بكم • Design v10</span>
+        <span class="welcomeLabel">مرحبًا بكم</span>
         <h2>أهلًا بكم في تلخيص الاجتماعات</h2>
-        <p>تم البرمجة بواسطة <strong>المبرمج نور خالد</strong><br>إهداء إلى <strong>دكتور ياسر خوجة</strong> وإلى <strong>منصة أحكام بيزنس</strong></p>
-      </div>
-      <div class="welcomeBannerBadge">
-        <span>Meeting Summary AI</span>
-        <b>واجهة مطورة بتصميم احترافي</b>
+        <p>تم البرمجة بواسطة <strong>المبرمج نور خالد</strong><br>إهداء إلى <strong>دكتور ياسر خوجة</strong> وإلى <strong>أستاذة هبة الغامدي</strong></p>
       </div>
     </section>
 
@@ -158,6 +149,7 @@
         <div class="controlsBar">
           <button id="micBtn" class="control">إيقاف الميكروفون</button>
           <button id="camBtn" class="control">إيقاف الكاميرا</button>
+          <button id="flipCamBtn" class="control">تبديل الكاميرا</button>
           <button id="screenBtn" class="control">مشاركة الشاشة</button>
           <button id="copyBtn" class="control strong">نسخ الرابط</button>
           <button id="leaveBtn" class="control danger">مغادرة</button>
@@ -201,6 +193,6 @@
   <div id="toast" class="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
-  <script src="app.js?v=11.0.0"></script>
+  <script src="app.js?v=12.0.0"></script>
 </body>
 </html>

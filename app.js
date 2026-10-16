@@ -76,7 +76,7 @@ async function getPreviewMedia() {
   previewStream = null;
   try {
     previewStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: currentFacingMode },
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     });
     desiredMic = true; desiredCam = true;
@@ -343,6 +343,8 @@ function updateTileMediaState(participant) {
 }
 function renderLocalLiveKitVideo() {
   if (!lkRoom) return;
+  const localTile = $('#v-local');
+  localTile?.classList.toggle('rearCamera', currentFacingMode === 'environment');
   const tile=$('#v-local'); if(!tile) return;
   const video=tile.querySelector('video');
   const pub=lkRoom.localParticipant.getTrackPublication(Track.Source.Camera);
@@ -386,6 +388,24 @@ $('#camBtn').onclick = async () => {
     desiredCam=next; renderLocalLiveKitVideo(); updateLocalButtons();
     toast(next ? 'الكاميرا تعمل الآن' : 'تم إيقاف الكاميرا');
   } catch (e) { toast('لم يسمح المتصفح بالكاميرا. اسمح بها من إعدادات الموقع.'); }
+};
+
+$('#flipCamBtn').onclick = async () => {
+  if (!lkRoom) return toast('الاتصال لم يكتمل بعد');
+  if (!desiredCam) return toast('شغّل الكاميرا أولًا');
+  const nextFacing = currentFacingMode === 'user' ? 'environment' : 'user';
+  try {
+    await lkRoom.localParticipant.setCameraEnabled(false);
+    currentFacingMode = nextFacing;
+    await lkRoom.localParticipant.setCameraEnabled(true, { facingMode: currentFacingMode });
+    desiredCam = true;
+    renderLocalLiveKitVideo();
+    updateLocalButtons();
+    toast(currentFacingMode === 'environment' ? 'تم تشغيل الكاميرا الخلفية' : 'تم تشغيل الكاميرا الأمامية');
+  } catch (e) {
+    console.error(e);
+    toast('تعذر تبديل الكاميرا على هذا الجهاز');
+  }
 };
 
 $('#screenBtn').onclick = async () => {
