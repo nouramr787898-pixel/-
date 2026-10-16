@@ -8,7 +8,6 @@ import crypto from 'crypto';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
-import OpenAI from 'openai';
 import { AccessToken } from 'livekit-server-sdk';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +23,6 @@ const io = new Server(server, {
 
 const upload = multer({ dest: os.tmpdir(), limits: { fileSize: 120 * 1024 * 1024 } });
 const port = process.env.PORT || 3000;
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(__dirname, { index: 'index.html' }));
@@ -67,27 +65,80 @@ app.post('/api/livekit-token', async (req, res) => {
 });
 
 app.post('/api/summarize', upload.single('audio'), async (req, res) => {
-  if (!openai) return res.status(503).json({ error: 'OPENAI_API_KEY is not configured.' });
+  if (!process.env.GEMINI_API_KEY) return res.status(503).json({ error: 'GEMINI_API_KEY is not configured.' });
   if (!req.file) return res.status(400).json({ error: 'Audio file is required.' });
+
   const p = req.file.path;
   try {
-    const tr = await openai.audio.transcriptions.create({ file: fs.createReadStream(p), model: 'gpt-4o-mini-transcribe' });
-    const transcript = tr.text?.trim() || '';
-    if (!transcript) return res.status(400).json({ error: 'No speech could be transcribed.' });
-    const out = await openai.responses.create({
-      model: process.env.SUMMARY_MODEL || 'gpt-4.1-mini',
-      instructions: 'لخص نص الاجتماع وأعد JSON صالح فقط بالشكل التالي: {"title":"عنوان قصير","summary":"ملخص واضح بالعربية","keyPoints":[""],"decisions":[""],"actions":[{"task":"","owner":"","deadline":""}],"followUps":[""]}. لا تخترع أي أسماء أو قرارات أو مواعيد لم تُذكر.',
-      input: transcript,
+    const audioBytes = fs.readFileSync(p).toString('base64');
+    const mimeType = req.file.mimetype || 'audio/webm';
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+
+    const prompt = `أنت مساعد اجتماعات محترف. استمع إلى تسجيل الاجتماع بالكامل، ثم أعد JSON صالح فقط بدون Markdown بالشكل التالي:
+{
+  "transcript":"النص الكامل المنطوق في الاجتماع قدر الإمكان",
+  "title":"عنوان قصير للاجتماع",
+  "summary":"ملخص واضح ومركز بالعربية",
+  "keyPoints":["أهم نقطة"],
+  "decisions":["قرار تم اتخاذه"],
+  "actions":[{"task":"المهمة","owner":"المسؤول إن ذُكر وإلا فارغ","deadline":"الموعد إن ذُكر وإلا فارغ"}],
+  "followUps":["نقطة متابعة"]
+}
+لا تخترع أسماء أو قرارات أو مواعيد لم تُذكر. إذا لم توجد عناصر في قسم معين أعد مصفوفة فارغة. إذا كانت المحادثة بالعربية فاحتفظ بالعربية، وإذا كانت بلغة أخرى فاجعل الملخص بالعربية مع الحفاظ على المعنى.`;
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': process.env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType, data: audioBytes } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json'
+        }
+      })
     });
-    let raw = out.output_text?.trim() || '{}';
+
+    const payload = await response.json();
+    if (!response.ok) {
+      const message = payload?.error?.message || `Gemini API error (${response.status})`;
+      throw new Error(message);
+    }
+
+    let raw = payload?.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('').trim() || '';
     raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```$/,'').trim();
-    let summary;
-    try { summary = JSON.parse(raw); } catch { summary = { title:'ملخص الاجتماع', summary:raw, keyPoints:[], decisions:[], actions:[], followUps:[] }; }
-    res.json({ transcript, summary });
+    if (!raw) throw new Error('Gemini returned an empty response.');
+
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch { throw new Error('Gemini returned an invalid summary format. Please try again.'); }
+
+    const transcript = parsed.transcript || '';
+    const summary = {
+      title: parsed.title || 'ملخص الاجتماع',
+      summary: parsed.summary || '',
+      keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
+      decisions: Array.isArray(parsed.decisions) ? parsed.decisions : [],
+      actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+      followUps: Array.isArray(parsed.followUps) ? parsed.followUps : [],
+    };
+
+    res.json({ transcript, summary, provider: 'gemini', model });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e?.message || 'AI processing failed.' });
-  } finally { fs.unlink(p, () => {}); }
+    console.error('Gemini summarize error:', e);
+    res.status(500).json({ error: e?.message || 'Gemini processing failed.' });
+  } finally {
+    fs.unlink(p, () => {});
+  }
 });
 
 function removeSocketFromRoom(socket, roomId, notify = true) {

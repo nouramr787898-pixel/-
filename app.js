@@ -437,7 +437,7 @@ async function summarize(blob){
   try{
     const fd=new FormData();fd.append('audio',blob,'meeting.webm');
     const r=await fetch('/api/summarize',{method:'POST',body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error||'فشل التلخيص');renderSummary(data);
-  }catch(e){alert('تعذر إنشاء الملخص: '+e.message+'\nتأكد من OPENAI_API_KEY ورصيد الـAPI.');location.href=location.pathname;}
+  }catch(e){console.error(e); show('processing'); $('#processingText').textContent='تعذر إنشاء الملخص: '+e.message+' — تحقق من GEMINI_API_KEY وحدود الاستخدام ثم حاول مرة أخرى.';}
 }
 function fillList(sel,items,empty='لا يوجد شيء محدد.'){const ul=$(sel);ul.innerHTML='';(items?.length?items:[empty]).forEach(x=>{const li=document.createElement('li');li.textContent=x;ul.appendChild(li);});}
 function renderSummary(data){

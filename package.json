@@ -1,16 +1,19 @@
 {
-  "name":"ai-meeting-livekit",
-  "version":"3.0.0",
-  "private":true,
-  "type":"module",
-  "scripts":{"start":"node server.js"},
-  "engines":{"node":">=20"},
-  "dependencies":{
-    "dotenv":"^16.6.1",
-    "express":"^5.1.0",
-    "livekit-server-sdk":"^2.19.1",
-    "multer":"^2.0.2",
-    "openai":"^6.3.0",
-    "socket.io":"^4.8.1"
+  "name": "ai-meeting-livekit-gemini",
+  "version": "4.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "livekit-server-sdk": "^2.19.1",
+    "multer": "^2.0.2",
+    "socket.io": "^4.8.1"
   }
 }

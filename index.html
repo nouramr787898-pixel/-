@@ -100,7 +100,7 @@
   <section id="rejected" class="page hidden"><div class="statusCard card"><h2>لم تتم الموافقة على الانضمام</h2><p>يمكنك الرجوع وطلب الانضمام مرة أخرى.</p><button class="primary" onclick="location.reload()">العودة</button></div></section>
   <section id="ended" class="page hidden"><div class="statusCard card"><h2>انتهى الاجتماع</h2><p>أنهى صاحب الاجتماع هذه الجلسة.</p><button class="primary" onclick="location.href=location.pathname">الرئيسية</button></div></section>
 
-  <section id="processing" class="page hidden"><div class="statusCard card"><div class="spinner"></div><h2>جاري إعداد ملخص الاجتماع</h2><p>يتم تحويل الصوت إلى نص ثم استخراج أهم النقاط والقرارات والمهام.</p></div></section>
+  <section id="processing" class="page hidden"><div class="statusCard card"><div class="spinner"></div><h2>جاري إعداد ملخص الاجتماع</h2><p id="processingText">يتم إرسال تسجيل الاجتماع إلى Gemini لاستخراج النص والملخص وأهم النقاط والقرارات والمهام.</p></div></section>
 
   <section id="summary" class="page hidden">
     <div class="summaryShell">

@@ -1,9 +1,12 @@
-AI Meeting v7 — LiveKit media engine
+AI Meeting — LiveKit + Gemini
 
-Required Railway variables:
-OPENAI_API_KEY=...
-LIVEKIT_URL=wss://YOUR-PROJECT.livekit.cloud
+Railway Variables required:
+GEMINI_API_KEY=your_google_ai_studio_key
+GEMINI_MODEL=gemini-2.5-flash-lite
+LIVEKIT_URL=wss://YOUR_PROJECT.livekit.cloud
 LIVEKIT_API_KEY=...
 LIVEKIT_API_SECRET=...
 
-The LiveKit secret stays only on Railway/server. Never put it in app.js or GitHub.
+Start command: npm start
+
+Gemini is used for meeting-audio transcription and AI summary. Free-tier availability and limits depend on your Google AI Studio project/model.
