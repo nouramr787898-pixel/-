@@ -1,1 +1,1 @@
-AI Meeting build v14.0.0 - dedication update
+AI Meeting build v17.0.0 - mobile camera variable fix

@@ -266,3 +266,9 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:
   .heroIconPanel{min-height:220px}
   .heroIconCore{transform:scale(.9)}
 }
+
+
+/* ===== v16: microphone icon only ===== */
+.heroIconPanel{background:linear-gradient(180deg,#151515,#0d0d0d)!important}
+.heroIconOrb,.sparkDot{display:none!important}
+.heroIconCore{animation:heroFloat 4.2s ease-in-out infinite}

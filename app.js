@@ -8,6 +8,7 @@ let approved = false;
 let previewStream = null;
 let desiredMic = true;
 let desiredCam = true;
+let currentFacingMode = 'user';
 let mediaKey = '';
 let lkRoom = null;
 let recorder = null;
@@ -393,18 +394,36 @@ $('#camBtn').onclick = async () => {
 $('#flipCamBtn').onclick = async () => {
   if (!lkRoom) return toast('الاتصال لم يكتمل بعد');
   if (!desiredCam) return toast('شغّل الكاميرا أولًا');
-  const nextFacing = currentFacingMode === 'user' ? 'environment' : 'user';
+
+  const previousFacing = currentFacingMode;
+  const nextFacing = previousFacing === 'user' ? 'environment' : 'user';
+
   try {
+    // Mobile Safari/Chrome: restart the published camera track with the other facing mode.
     await lkRoom.localParticipant.setCameraEnabled(false);
     currentFacingMode = nextFacing;
     await lkRoom.localParticipant.setCameraEnabled(true, { facingMode: currentFacingMode });
+
     desiredCam = true;
     renderLocalLiveKitVideo();
     updateLocalButtons();
-    toast(currentFacingMode === 'environment' ? 'تم تشغيل الكاميرا الخلفية' : 'تم تشغيل الكاميرا الأمامية');
+    toast(currentFacingMode === 'environment'
+      ? 'تم تشغيل الكاميرا الخلفية'
+      : 'تم تشغيل الكاميرا الأمامية');
   } catch (e) {
-    console.error(e);
-    toast('تعذر تبديل الكاميرا على هذا الجهاز');
+    console.error('flip camera', e);
+    currentFacingMode = previousFacing;
+
+    // Recover the original camera so a failed switch never breaks the meeting.
+    try {
+      await lkRoom.localParticipant.setCameraEnabled(true, { facingMode: currentFacingMode });
+      desiredCam = true;
+      renderLocalLiveKitVideo();
+      updateLocalButtons();
+    } catch (restoreError) {
+      console.error('restore camera', restoreError);
+    }
+    toast('هذا الجهاز أو المتصفح لم يسمح بتبديل الكاميرا');
   }
 };
 
