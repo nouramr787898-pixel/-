@@ -9,6 +9,13 @@ let previewStream = null;
 let desiredMic = true;
 let desiredCam = true;
 let currentFacingMode = 'user';
+let meetingStartAt = 0;
+let meetingClock = null;
+let lastSummaryBlob = null;
+let lastSummaryData = null;
+let knownParticipants=[];
+let unreadCount=0;
+let activeTalkers = new Set();
 let mediaKey = '';
 let lkRoom = null;
 let recorder = null;
@@ -51,7 +58,7 @@ function createMeeting() {
 $('#createMeeting').onclick = createMeeting;
 $('#headerCreate').onclick = createMeeting;
 $('#closePeopleBtn').onclick = () => setPeoplePanel(false);
-$('#peopleToggleBtn').onclick = () => setPeoplePanel($('#peoplePanel').classList.contains('panelHidden'));
+$('#peopleToggleBtn').onclick = () => {$('#chatPanel')?.classList.add('hidden');setPeoplePanel($('#peoplePanel').classList.contains('panelHidden'));};
 $('#joinByCode').onclick = () => {
   const link = prompt('الصق رابط الاجتماع هنا');
   if (!link) return;
@@ -159,7 +166,7 @@ socket.on('join-rejected', () => { previewStream?.getTracks().forEach(t => t.sto
 socket.on('room-unavailable', () => { alert('هذا الاجتماع غير متاح أو انتهى.'); location.href = location.pathname; });
 
 async function enterMeetingAndConnect() {
-  show('meeting'); window.scrollTo(0,0); setPeoplePanel(false);
+  show('meeting'); window.scrollTo(0,0); setPeoplePanel(false); startMeetingClock();
   $('#meetingRoomId').textContent = 'رمز: ' + roomId;
   if (isHost) $('#endBtn').classList.remove('hidden');
   addLocalTile();
@@ -205,7 +212,10 @@ async function connectLiveKit() {
     .on(RoomEvent.LocalTrackUnpublished, publication => onLocalTrackUnpublished(publication))
     .on(RoomEvent.TrackMuted, (publication, participant) => updateTileMediaState(participant))
     .on(RoomEvent.TrackUnmuted, (publication, participant) => updateTileMediaState(participant))
-    .on(RoomEvent.Disconnected, () => toast('انقطع اتصال الاجتماع'));
+    .on(RoomEvent.Disconnected, () => toast('انقطع اتصال الاجتماع'))
+    .on(RoomEvent.ActiveSpeakersChanged, speakers => {
+      activeTalkers = new Set(speakers.map(p=>p.identity)); syncSpeakingUI();
+    });
 
   await lkRoom.connect(url, token);
 
@@ -316,6 +326,7 @@ function addLocalTile() {
   tile.querySelector('.videoLabel').textContent = displayName + ' (أنت)';
   bindTileActions(tile);
   updateGridLayout();
+  syncPinnedUI();
 }
 function ensureRemoteTile(id, name='مشارك') {
   let tile = document.getElementById(tileId(id));
@@ -330,6 +341,7 @@ function ensureRemoteTile(id, name='مشارك') {
   tile.querySelector('.videoLabel').textContent = name;
   bindTileActions(tile);
   updateGridLayout();
+  syncPinnedUI();
   return tile;
 }
 
@@ -343,7 +355,7 @@ function syncPinnedUI() {
   for (const tile of tiles) {
     const pinned = tile.id === pinnedTileId;
     tile.classList.toggle('pinnedTile', pinned);
-    tile.classList.toggle('hiddenByPin', !!pinnedTileId && !pinned);
+    tile.classList.toggle('thumbByPin', !!pinnedTileId && !pinned);
     const btn = tile.querySelector('.pinTileBtn');
     if (btn) btn.textContent = pinned ? 'إلغاء التثبيت' : 'تثبيت';
   }
@@ -601,6 +613,7 @@ document.addEventListener('pointerdown', () => unlockAudio(), { passive:true });
 
 socket.on('room-state', state => {
   const list=state.participants||[];
+  knownParticipants=list; refreshChatRecipients(); syncSpeakingUI();
   $('#participantCount').textContent = list.length + (list.length===1?' مشارك':' مشاركين');
   $('#peopleCount').textContent=list.length;
   renderParticipants(list,state.hostId);
@@ -613,7 +626,8 @@ function renderParticipants(list,hostId) {
     row.innerHTML='<div class="participantInfo">'+miniAvatarMarkup(p.name||'م', p.id+'-'+(p.name||''))+'<div><b class="pname"></b><div class="personMeta"></div></div></div><span class="hostTag hidden">المضيف</span>';
     row.querySelector('.pname').textContent=p.name+(p.id===socket.id?' (أنت)':'');
     row.querySelector('.personMeta').textContent=[p.mic===false?'الميكروفون مغلق':'الميكروفون يعمل',p.cam===false?'الكاميرا مغلقة':'الكاميرا تعمل'].join(' • ');
-    if(p.id===hostId) row.querySelector('.hostTag').classList.remove('hidden'); box.appendChild(row);
+    row.querySelector('.personMeta').textContent = (p.mic===false?'🔇':'🎙️')+' '+(p.cam===false?'📷 مغلقة':'📹 تعمل');
+    row.dataset.pid=p.id; if(p.id===hostId) row.querySelector('.hostTag').classList.remove('hidden'); box.appendChild(row);
   }
 }
 
@@ -659,31 +673,90 @@ function startRecording(){
     const lp=lkRoom?.localParticipant?.getTrackPublication(Track.Source.Microphone);
     if(lp?.track)connectTrackToRecorder(lp.track,'local-'+lp.trackSid);
     for(const p of lkRoom?.remoteParticipants?.values()||[]){for(const pub of p.trackPublications.values()) if(pub.source===Track.Source.Microphone&&pub.track)connectTrackToRecorder(pub.track,'remote-'+p.identity+'-'+pub.trackSid);}
+    if (!confirm('سيُسجّل صوت الاجتماع للتفريغ والتلخيص. تأكد من موافقة جميع المشاركين. هل تريد بدء التسجيل؟')) {toast('لن يُسجّل الاجتماع للتلخيص');return;}
     recorder=new MediaRecorder(audioDest.stream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
-    recorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data);}; recorder.start(1000);
+    recorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data);}; recorder.start(1000);$('#recordingNotice').classList.remove('hidden');socket.emit('recording-state',{roomId,active:true});
   }catch(e){console.error(e);toast('تعذر بدء تسجيل صوت الملخص');}
 }
 $('#endBtn').onclick=()=>{
   if(!isHost)return;
-  socket.emit('end-room',{roomId});
   if(!recorder||recorder.state==='inactive'){toast('لا يوجد تسجيل متاح للتلخيص');return;}
+  socket.emit('end-room',{roomId});
   show('processing');
   recorder.onstop=async()=>{const blob=new Blob(recordChunks,{type:'audio/webm'});try{await lkRoom?.disconnect();}catch{}await summarize(blob);};
-  recorder.stop();
+  $('#recordingNotice').classList.add('hidden');recorder.stop();
 };
 async function summarize(blob){
+  $('#retrySummary').disabled=true;lastSummaryBlob=blob; $('#retrySummary').classList.add('hidden');$('#processingSpinner').classList.remove('hidden');
   try{
     const fd=new FormData();fd.append('audio',blob,'meeting.webm');
     const r=await fetch('/api/summarize',{method:'POST',body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error||'فشل التلخيص');renderSummary(data);
-  }catch(e){console.error(e); show('processing'); $('#processingText').textContent='تعذر إنشاء الملخص: '+e.message+' — تحقق من GEMINI_API_KEY وحدود الاستخدام ثم حاول مرة أخرى.';}
+  }catch(e){console.error(e); show('processing'); $('#processingText').textContent='تعذر إنشاء الملخص: '+e.message+' — يمكنك إعادة المحاولة دون إجراء اجتماع جديد.';$('#retrySummary').classList.remove('hidden');$('#retrySummary').disabled=false;$('#processingSpinner').classList.add('hidden');}
 }
 function fillList(sel,items,empty='لا يوجد شيء محدد.'){const ul=$(sel);ul.innerHTML='';(items?.length?items:[empty]).forEach(x=>{const li=document.createElement('li');li.textContent=x;ul.appendChild(li);});}
 function renderSummary(data){
-  const s=data.summary||{};show('summary');$('#summaryTitle').textContent=s.title||'ملخص الاجتماع';$('#summaryText').textContent=s.summary||'لم يتوفر ملخص.';
+  lastSummaryData=data; const s=data.summary||{};show('summary');selectSummaryTab('overview');$('#summaryTitle').textContent=s.title||'ملخص الاجتماع';$('#summaryText').textContent=s.summary||'لم يتوفر ملخص.';
   fillList('#keyPoints',s.keyPoints);fillList('#decisions',s.decisions);fillList('#followUps',s.followUps);$('#actions').innerHTML='';
   if(s.actions?.length)s.actions.forEach(a=>{const d=document.createElement('div');d.className='taskCard';d.innerHTML='<b></b><div class="taskMeta"></div>';d.querySelector('b').textContent=a.task||'مهمة';d.querySelector('.taskMeta').textContent=[a.owner&&('المسؤول: '+a.owner),a.deadline&&('الموعد: '+a.deadline)].filter(Boolean).join(' • ')||'لم يذكر مسؤول أو موعد';$('#actions').appendChild(d);});else $('#actions').textContent='لم تُذكر مهام واضحة.';
   $('#transcript').textContent=data.transcript||'';
 }
 $('#newMeeting').onclick=()=>location.href=location.pathname;
+
+
+function startMeetingClock(){
+  meetingStartAt=Date.now();clearInterval(meetingClock);
+  const tick=()=>{const seconds=Math.floor((Date.now()-meetingStartAt)/1000);$('#meetingTimer').textContent=String(Math.floor(seconds/3600)).padStart(2,'0')+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0')};
+  tick();meetingClock=setInterval(tick,1000);
+}
+function syncSpeakingUI(){
+  document.querySelectorAll('.videoTile').forEach(tile=>{
+    const identity=tile.id==='v-local' ? lkRoom?.localParticipant?.identity : tile.id.slice(2);
+    tile.classList.toggle('speaking', !!identity && activeTalkers.has(identity));
+    let indicator=tile.querySelector('.talkIndicator');
+    if(!indicator){indicator=document.createElement('div');indicator.className='talkIndicator';indicator.innerHTML='<span></span><span></span><span></span>';tile.appendChild(indicator)}
+  });
+  document.querySelectorAll('.participantRow').forEach(row=>row.classList.toggle('speaking',activeTalkers.has(row.dataset.pid)));
+}
+$('#moreBtn').onclick=()=>$('#extraActions').classList.toggle('hidden');
+$('#chatToggleBtn').onclick=()=>{const panel=$('#chatPanel');panel.classList.toggle('hidden');if(!panel.classList.contains('hidden')){setPeoplePanel(false);unreadCount=0;$('#unreadChat').textContent='';panel.scrollIntoView({block:'nearest',behavior:'smooth'})}};
+$('#closeChatBtn').onclick=()=>$('#chatPanel').classList.add('hidden');
+function refreshChatRecipients(){
+  const sel=$('#chatRecipient');const before=sel.value;
+  sel.innerHTML='<option value="all">الجميع</option>';
+  for(const p of knownParticipants){if(p.id===socket.id)continue;const opt=document.createElement('option');opt.value=p.id;opt.textContent='خاص: '+p.name;sel.appendChild(opt)}
+  if([...sel.options].some(o=>o.value===before))sel.value=before;
+}
+$('#chatForm').onsubmit=e=>{e.preventDefault();const input=$('#chatText');const text=input.value.trim();if(!text)return;socket.emit('chat-message',{roomId,text,target:$('#chatRecipient').value});input.value=''};
+$('#chatImage').onchange=async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>2*1024*1024){toast('الصورة يجب أن تكون PNG أو JPG أو WEBP وأقل من 2MB');e.target.value='';return}
+  const reader=new FileReader();reader.onload=()=>socket.emit('chat-image',{roomId,data:reader.result,target:$('#chatRecipient').value});reader.readAsDataURL(file);e.target.value='';
+};
+socket.on('chat-message',msg=>{
+  const box=$('#chatMessages');const item=document.createElement('div');item.className='chatMessage';
+  const head=document.createElement('b');head.textContent=msg.name+(msg.target!=='all'?' • خاص':'')+' • '+new Date(msg.time).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});item.appendChild(head);
+  if(msg.text){const p=document.createElement('p');p.textContent=msg.text;item.appendChild(p)}
+  if(msg.image){const img=document.createElement('img');img.src=msg.image;img.alt='صورة مرسلة';img.loading='lazy';item.appendChild(img)}
+  box.appendChild(item);box.scrollTop=box.scrollHeight;
+  if($('#chatPanel').classList.contains('hidden')&&msg.from!==socket.id){unreadCount++;$('#unreadChat').textContent=' ('+unreadCount+')'}
+});
+socket.on('recording-state',({active})=>$('#recordingNotice').classList.toggle('hidden',!active));
+$('#retrySummary').onclick=()=>{if(lastSummaryBlob){$('#processingText').textContent='جاري إعادة محاولة التلخيص...';summarize(lastSummaryBlob)}};
+function selectSummaryTab(key){document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el.dataset.tab===key));document.querySelectorAll('[data-section]').forEach(el=>el.classList.toggle('hidden',el.dataset.section!==key))}
+document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>selectSummaryTab(el.dataset.tab));
+function summaryPlainText(){
+  if(!lastSummaryData)return '';
+  const s=lastSummaryData.summary||{};
+  const lines=[s.title||'ملخص الاجتماع','',s.summary||'', '', 'أهم النقاط',...(s.keyPoints||[]).map(x=>'• '+x),'','القرارات',...(s.decisions||[]).map(x=>'• '+x),'','المهام',...(s.actions||[]).map(x=>'• '+(x.task||'')+' — '+(x.owner||'')+' — '+(x.deadline||'')),'','المتابعات',...(s.followUps||[]).map(x=>'• '+x),'','النص الكامل',lastSummaryData.transcript||''];
+  return lines.join('\n');
+}
+$('#copySummary').onclick=async()=>{try{await navigator.clipboard.writeText(summaryPlainText());toast('تم نسخ الملخص')}catch{toast('تعذر النسخ')}};
+$('#exportWord').onclick=()=>{
+  if(!lastSummaryData)return;
+  const escapeHtml=t=>t.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  const doc='<html lang="ar" dir="rtl"><meta charset="utf-8"><body style="font-family:Arial;direction:rtl;white-space:pre-wrap">'+escapeHtml(summaryPlainText())+'</body></html>';
+  const link=document.createElement('a');link.href=URL.createObjectURL(new Blob(['\ufeff',doc],{type:'application/msword'}));link.download='meeting-summary.doc';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),10000);
+};
+$('#exportPdf').onclick=()=>{if(!lastSummaryData)return;const win=window.open('','_blank');if(!win){toast('اسمح بفتح النوافذ للطباعة');return}const text=summaryPlainText();win.document.write('<html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>ملخص الاجتماع</title><style>body{font-family:Arial;padding:35px;white-space:pre-wrap;line-height:1.9}</style></head><body></body></html>');win.document.body.textContent=text;win.document.close();win.focus();setTimeout(()=>win.print(),500)};
 
 if(roomId)openPrejoin();

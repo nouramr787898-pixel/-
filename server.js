@@ -286,6 +286,26 @@ io.on('connection', socket => {
     room.pending.delete(target); io.to(target).emit('join-rejected');
   });
 
+  socket.on('recording-state',({roomId,active})=>{const room=rooms.get(roomId);if(room?.hostId===socket.id)io.to(roomId).emit('recording-state',{active:!!active});});
+  socket.on('chat-message', ({ roomId, text, target }) => {
+    const room=rooms.get(roomId); const sender=room?.participants.get(socket.id);
+    if (!sender || typeof text !== 'string') return;
+    const clean=text.trim().slice(0,2000); if(!clean)return;
+    const event={ from:socket.id,name:sender.name,text:clean,target:target||'all',time:Date.now() };
+    if(target && target!=='all') {
+      if(!room.participants.has(target))return;
+      io.to(target).emit('chat-message',event);
+      socket.emit('chat-message',event);
+    } else io.to(roomId).emit('chat-message',event);
+  });
+  socket.on('chat-image', ({ roomId, data, target }) => {
+    const room=rooms.get(roomId); const sender=room?.participants.get(socket.id);
+    if(!sender || typeof data!=='string' || data.length>2800000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(data))return;
+    const event={from:socket.id,name:sender.name,image:data,target:target||'all',time:Date.now()};
+    if(target && target!=='all') {if(!room.participants.has(target))return;io.to(target).emit('chat-message',event);socket.emit('chat-message',event);}
+    else io.to(roomId).emit('chat-message',event);
+  });
+
   socket.on('media-state', ({ roomId, mic, cam }) => {
     const p = rooms.get(roomId)?.participants.get(socket.id); if (!p) return;
     p.mic = !!mic; p.cam = !!cam; broadcastState(roomId);

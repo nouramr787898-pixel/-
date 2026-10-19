@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#090909" />
   <title>تسجيل الاجتماعات AI</title>
   <link rel="icon" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=19.0.0" />
+  <link rel="stylesheet" href="style.css?v=20.0.0" />
 </head>
 <body data-build="19.0.0">
   <header class="topbar">
@@ -141,7 +141,7 @@
   <section id="meeting" class="meeting hidden">
     <div class="meetingTop">
       <div class="meetingTitle"><img src="logo.png" alt="logo"><div><b id="meetingName">الاجتماع</b><span id="meetingRoomId"></span></div></div>
-      <div class="meetingTopActions"><span id="participantCount">1 مشارك</span><button id="peopleToggleBtn" class="peopleToggle">المشاركون</button><button id="topCopyBtn" class="copyMain">نسخ رابط الاجتماع</button></div>
+      <div class="meetingTopActions"><span id="meetingTimer">00:00</span><span id="participantCount">1 مشارك</span><button id="peopleToggleBtn" class="peopleToggle">المشاركون</button><button id="chatToggleBtn" class="peopleToggle">المحادثة <span id="unreadChat"></span></button><button id="topCopyBtn" class="copyMain">نسخ رابط الاجتماع</button></div>
     </div>
 
     <section class="welcomeBanner card">
@@ -154,15 +154,15 @@
 
     <div class="meetingBody">
       <div class="stage">
-        <div id="videoGrid" class="videoGrid"></div>
+        <div id="videoGrid" class="videoGrid"></div><div id="recordingNotice" class="recordingNotice hidden" role="status">● يجري تسجيل صوت الاجتماع لأجل التلخيص بموافقة المشاركين</div>
         <div class="controlsBar">
           <button id="micBtn" class="control">إيقاف الميكروفون</button>
           <button id="camBtn" class="control">إيقاف الكاميرا</button>
           <button id="flipCamBtn" class="control">تبديل الكاميرا</button>
-          <button id="screenBtn" class="control">مشاركة الشاشة</button>
-          <button id="copyBtn" class="control strong">نسخ الرابط</button>
+
+
           <button id="leaveBtn" class="control danger">مغادرة</button>
-          <button id="endBtn" class="control end hidden">إنهاء وتلخيص</button>
+<button id="moreBtn" class="control">المزيد ⋯</button><button id="endBtn" class="control end hidden">إنهاء وتلخيص</button>
         </div>
       </div>
 
@@ -179,22 +179,32 @@
           <button id="copySide" class="primary full">نسخ رابط الاجتماع</button>
         </div>
       </aside>
+      <aside id="chatPanel" class="chatPanel hidden" aria-label="محادثة الاجتماع">
+        <div class="panelHead"><h3>المحادثة والملفات</h3><button id="closeChatBtn" class="closePanel">×</button></div>
+        <label for="chatRecipient">المستلم</label>
+        <select id="chatRecipient" class="textInput"><option value="all">الجميع</option></select>
+        <div id="chatMessages" class="chatMessages" aria-live="polite"></div>
+        <form id="chatForm" class="chatForm"><input id="chatText" class="textInput" maxlength="2000" placeholder="اكتب رسالة..." autocomplete="off"><button class="primary" type="submit">إرسال</button></form>
+        <label class="attachLabel">إرسال صورة (حد 2 ميجابايت)<input id="chatImage" type="file" accept="image/png,image/jpeg,image/webp" hidden></label>
+      </aside>
     </div>
+    <div id="extraActions" class="extraActions hidden"><button id="screenBtn" class="control">مشاركة الشاشة</button><button id="copyBtn" class="control strong">نسخ الرابط</button></div>
   </section>
 
   <section id="rejected" class="page hidden"><div class="statusCard card"><h2>لم تتم الموافقة على الانضمام</h2><p>يمكنك الرجوع وطلب الانضمام مرة أخرى.</p><button class="primary" onclick="location.reload()">العودة</button></div></section>
   <section id="ended" class="page hidden"><div class="statusCard card"><h2>انتهى الاجتماع</h2><p>أنهى صاحب الاجتماع هذه الجلسة.</p><button class="primary" onclick="location.href=location.pathname">الرئيسية</button></div></section>
 
-  <section id="processing" class="page hidden"><div class="statusCard card"><div class="spinner"></div><h2>جاري إعداد ملخص الاجتماع</h2><p id="processingText">يتم إرسال تسجيل الاجتماع إلى Gemini لاستخراج النص والملخص وأهم النقاط والقرارات والمهام.</p></div></section>
+  <section id="processing" class="page hidden"><div class="statusCard card"><div class="spinner" id="processingSpinner"></div><h2>جاري إعداد ملخص الاجتماع</h2><p id="processingText">يتم إرسال تسجيل الاجتماع إلى Gemini لاستخراج النص والملخص وأهم النقاط والقرارات والمهام.</p><button id="retrySummary" class="primary hidden">إعادة محاولة التلخيص</button></div></section>
 
   <section id="summary" class="page hidden">
     <div class="summaryShell">
       <div class="summaryHead"><div><span>نتيجة الاجتماع</span><h1 id="summaryTitle">ملخص الاجتماع</h1></div><button id="newMeeting" class="primary">اجتماع جديد</button></div>
-      <div class="summaryGrid">
-        <article class="card"><h2>الملخص</h2><p id="summaryText"></p><h3>أهم النقاط</h3><ul id="keyPoints"></ul><h3>القرارات</h3><ul id="decisions"></ul></article>
-        <article class="card"><h2>المهام</h2><div id="actions"></div><h3>المتابعات</h3><ul id="followUps"></ul></article>
+      <div class="summaryTools"><button id="copySummary" class="secondary">نسخ الملخص</button><button id="exportWord" class="secondary">تنزيل Word</button><button id="exportPdf" class="secondary">حفظ PDF</button></div>
+      <div class="summaryTabs" role="tablist"><button class="active" data-tab="overview">الملخص</button><button data-tab="decisions">القرارات</button><button data-tab="tasks">المهام</button><button data-tab="text">النص الكامل</button></div><div class="summaryGrid">
+        <article class="card summarySection" data-section="overview"><h2>الملخص</h2><p id="summaryText"></p><h3>أهم النقاط</h3><ul id="keyPoints"></ul></article><article class="card summarySection hidden" data-section="decisions"><h2>القرارات</h2><ul id="decisions"></ul></article>
+        <article class="card summarySection hidden" data-section="tasks"><h2>المهام</h2><div id="actions"></div><h3>المتابعات</h3><ul id="followUps"></ul></article>
       </div>
-      <details class="card"><summary>عرض النص الكامل للاجتماع</summary><pre id="transcript"></pre></details>
+      <div class="card summarySection hidden" data-section="text"><h2>النص الكامل للاجتماع</h2><pre id="transcript"></pre></div>
     </div>
   </section>
 
@@ -202,6 +212,6 @@
   <div id="toast" class="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
-  <script src="app.js?v=19.0.0"></script>
+  <script src="app.js?v=20.0.0"></script>
 </body>
 </html>
